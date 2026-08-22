@@ -6,7 +6,10 @@ import { Logo } from '@/components/brand';
 
 import { NavTabs, type NavItem } from './nav-tabs';
 
-const NAV: NavItem[] = [{ href: '/dashboard', label: 'סקירה' }];
+const NAV: NavItem[] = [
+  { href: '/dashboard', label: 'סקירה' },
+  { href: '/faults', label: 'תקלות' },
+];
 
 function initials(name: string) {
   return name
