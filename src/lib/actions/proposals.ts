@@ -88,3 +88,27 @@ export async function voteOnProposal(
   revalidatePath('/dashboard');
   return { error: null };
 }
+
+/**
+ * Ends the voting before closes_at. Allowed for the member who raised the
+ * proposal and for any vaad member; close_proposal() re-checks both.
+ */
+export async function closeProposal(
+  _prev: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  await requireProfile();
+
+  const id = String(form.get('proposal_id') ?? '');
+  if (!id) return { error: 'לא זוהתה ההצעה.' };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('close_proposal', { p_proposal_id: id });
+
+  if (error) return { error: toHebrewError(error) };
+
+  revalidatePath('/proposals');
+  revalidatePath(`/proposals/${id}`);
+  revalidatePath('/dashboard');
+  return { error: null };
+}

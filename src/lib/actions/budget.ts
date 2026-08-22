@@ -62,3 +62,29 @@ export async function createTransaction(
   revalidatePath('/dashboard');
   return { error: null };
 }
+
+/**
+ * Cancels a mistaken entry by recording its mirror image. Nothing is edited or
+ * deleted, so the ledger keeps a full audit trail and the balance still nets
+ * out correctly. Vaad only, enforced inside reverse_transaction().
+ */
+export async function reverseTransaction(
+  _prev: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  await requireProfile();
+
+  const id = String(form.get('transaction_id') ?? '');
+  if (!id) return { error: 'לא זוהתה התנועה.' };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('reverse_transaction', {
+    p_transaction_id: id,
+  });
+
+  if (error) return { error: toHebrewError(error) };
+
+  revalidatePath('/budget');
+  revalidatePath('/dashboard');
+  return { error: null };
+}

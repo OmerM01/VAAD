@@ -31,6 +31,7 @@ export type AppUser = {
   apartment_number: string | null;
   role: UserRole;
   created_at: string;
+  notifications_seen_at: string;
 };
 
 export type Fault = {
@@ -54,6 +55,8 @@ export type BudgetTransaction = {
   description: string;
   date: string;
   created_at: string;
+  /** Set on a correcting entry, pointing at the transaction it cancels out. */
+  reverses_id: string | null;
 };
 
 export type Proposal = {
@@ -114,6 +117,22 @@ export type BudgetSummary = {
   tx_count: number;
 };
 
+export type NotificationKind =
+  | 'fault_new'
+  | 'fault_status'
+  | 'transaction'
+  | 'proposal_new'
+  | 'proposal_closed';
+
+export type AppNotification = {
+  kind: NotificationKind;
+  entity_id: string;
+  title: string;
+  detail: string;
+  at: string;
+  is_new: boolean;
+};
+
 export type InviteCodes = {
   dayar_code: string;
   vaad_code: string;
@@ -150,7 +169,12 @@ export type Database = {
       };
       budget_transactions: {
         Row: Row<BudgetTransaction>;
-        Insert: Insert<Omit<BudgetTransaction, 'id' | 'created_at'>>;
+        Insert: Insert<
+          Omit<BudgetTransaction, 'id' | 'created_at' | 'date' | 'reverses_id'> & {
+            date?: string;
+            reverses_id?: string | null;
+          }
+        >;
         Update: Update<BudgetTransaction>;
         Relationships: [];
       };
@@ -210,6 +234,22 @@ export type Database = {
       get_proposal_results: {
         Args: { p_proposal_id: string };
         Returns: ProposalResults[];
+      };
+      reverse_transaction: {
+        Args: { p_transaction_id: string };
+        Returns: string;
+      };
+      close_proposal: {
+        Args: { p_proposal_id: string };
+        Returns: undefined;
+      };
+      get_notifications: {
+        Args: { p_limit?: number };
+        Returns: AppNotification[];
+      };
+      mark_notifications_seen: {
+        Args: Record<never, never>;
+        Returns: undefined;
       };
       vote_on_proposal: {
         Args: {

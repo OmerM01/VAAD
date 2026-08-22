@@ -13,6 +13,8 @@ const MESSAGES: Record<string, string> = {
   NOT_FOUND: 'הפריט המבוקש לא נמצא.',
   PROPOSAL_CLOSED: 'ההצבעה על ההצעה הזו כבר נסגרה.',
   ALREADY_VOTED: 'כבר הצבעת על ההצעה הזו.',
+  ALREADY_REVERSED: 'התנועה הזו כבר בוטלה.',
+  IS_A_REVERSAL: 'אי אפשר לבטל תנועת ביטול.',
 
   // GoTrue
   'Invalid login credentials': 'אימייל או סיסמה שגויים.',

@@ -40,6 +40,10 @@ create table if not exists public.users (
 );
 create index if not exists users_building_idx on public.users (building_id);
 
+-- watermark for the notification bell: everything newer than this is "new"
+alter table public.users
+  add column if not exists notifications_seen_at timestamptz not null default now();
+
 create table if not exists public.faults (
   id          uuid primary key default gen_random_uuid(),
   building_id uuid not null references public.buildings (id) on delete cascade,
@@ -63,6 +67,15 @@ create table if not exists public.budget_transactions (
   date        date not null default current_date,
   created_at  timestamptz not null default now()
 );
+-- A recorded transaction is never edited or deleted. A mistake is corrected by
+-- a mirror transaction pointing back at it, which keeps the audit trail intact.
+alter table public.budget_transactions
+  add column if not exists reverses_id uuid
+  references public.budget_transactions (id) on delete cascade;
+
+create unique index if not exists budget_reverses_once
+  on public.budget_transactions (reverses_id) where reverses_id is not null;
+
 create index if not exists budget_building_idx on public.budget_transactions (building_id, date desc);
 
 create table if not exists public.proposals (
@@ -493,6 +506,164 @@ begin
   values (p_proposal_id, v_uid, p_vote, coalesce(p_anonymous, false));
 end $fn$;
 
+-- Corrects a mistaken entry by recording its mirror image rather than editing or
+-- deleting it, so the ledger stays append-only and the net balance still comes
+-- out right.
+create or replace function public.reverse_transaction(p_transaction_id uuid)
+returns uuid
+language plpgsql volatile security definer set search_path = public
+as $fn$
+declare
+  v_uid uuid := auth.uid();
+  v_tx  public.budget_transactions;
+  v_new uuid;
+begin
+  if v_uid is null then raise exception 'AUTH_REQUIRED'; end if;
+  if not public.is_vaad() then raise exception 'FORBIDDEN'; end if;
+
+  select * into v_tx from public.budget_transactions
+  where id = p_transaction_id and building_id = public.my_building_id();
+  if not found then raise exception 'NOT_FOUND'; end if;
+
+  if v_tx.reverses_id is not null then raise exception 'IS_A_REVERSAL'; end if;
+  if exists (select 1 from public.budget_transactions t where t.reverses_id = v_tx.id) then
+    raise exception 'ALREADY_REVERSED';
+  end if;
+
+  insert into public.budget_transactions
+    (building_id, created_by, type, amount, description, date, reverses_id)
+  values (
+    v_tx.building_id, v_uid,
+    case when v_tx.type = 'income' then 'expense'::public.transaction_type
+         else 'income'::public.transaction_type end,
+    v_tx.amount,
+    left('ביטול: ' || v_tx.description, 200),
+    current_date,
+    v_tx.id)
+  returning id into v_new;
+
+  return v_new;
+end $fn$;
+
+-- Ends the voting early. Open to the member who raised the proposal — including
+-- an anonymous one, since only they ever see the button — and to any vaad member.
+create or replace function public.close_proposal(p_proposal_id uuid)
+returns void
+language plpgsql volatile security definer set search_path = public
+as $fn$
+declare
+  v_uid uuid := auth.uid();
+  v_p   public.proposals;
+begin
+  if v_uid is null then raise exception 'AUTH_REQUIRED'; end if;
+
+  select * into v_p from public.proposals
+  where id = p_proposal_id and building_id = public.my_building_id();
+  if not found then raise exception 'NOT_FOUND'; end if;
+
+  if not (v_p.created_by = v_uid or public.is_vaad()) then raise exception 'FORBIDDEN'; end if;
+
+  if public.proposal_effective_status(v_p.status, v_p.closes_at) = 'closed' then
+    raise exception 'PROPOSAL_CLOSED';
+  end if;
+
+  update public.proposals set status = 'closed' where id = p_proposal_id;
+end $fn$;
+
+-- =============================================================================
+--  Notifications
+--
+--  Derived on read from rows that already exist — there is no events table to
+--  keep in sync and nothing to backfill. "New" means it happened after the
+--  reader last opened the bell.
+-- =============================================================================
+
+create or replace function public.get_notifications(p_limit int default 30)
+returns table (
+  kind      text,
+  entity_id uuid,
+  title     text,
+  detail    text,
+  at        timestamptz,
+  is_new    boolean
+)
+language plpgsql stable security definer set search_path = public
+as $fn$
+declare
+  v_uid  uuid := auth.uid();
+  v_bid  uuid := public.my_building_id();
+  v_seen timestamptz;
+begin
+  if v_bid is null then return; end if;
+  select u.notifications_seen_at into v_seen from public.users u where u.id = v_uid;
+
+  return query
+  with events as (
+    -- someone else reported a fault
+    select 'fault_new'::text as kind, f.id as entity_id, f.title as title,
+           u.full_name || ' דיווח על תקלה חדשה' as detail,
+           f.created_at as at
+      from public.faults f
+      join public.users u on u.id = f.reported_by
+     where f.building_id = v_bid and f.reported_by <> v_uid
+
+    union all
+    -- a fault moved to another status
+    select 'fault_status', f.id, f.title,
+           case f.status
+             when 'open'        then 'התקלה הוחזרה לסטטוס פתוח'
+             when 'in_progress' then 'התקלה עברה לטיפול'
+             else                    'התקלה נסגרה'
+           end,
+           f.updated_at
+      from public.faults f
+     where f.building_id = v_bid and f.updated_at > f.created_at
+
+    union all
+    -- money moved
+    select 'transaction', t.id, t.description,
+           case when t.reverses_id is not null then 'בוטלה תנועה על סך '
+                when t.type = 'income'         then 'נרשמה הכנסה של '
+                else                                'נרשמה הוצאה של '
+           end || to_char(t.amount, 'FM999,999,990.00') || ' ש"ח',
+           t.created_at
+      from public.budget_transactions t
+     where t.building_id = v_bid and t.created_by <> v_uid
+
+    union all
+    -- someone else raised a proposal; an anonymous one stays anonymous here too
+    select 'proposal_new', p.id, p.title,
+           case when p.creator_anonymous then 'הועלתה הצעה חדשה להצבעה'
+                else u.full_name || ' העלה הצעה חדשה להצבעה' end,
+           p.created_at
+      from public.proposals p
+      join public.users u on u.id = p.created_by
+     where p.building_id = v_bid and p.created_by <> v_uid
+
+    union all
+    -- voting ended
+    select 'proposal_closed', p.id, p.title,
+           'ההצבעה על ההצעה נסגרה',
+           coalesce(p.closes_at, p.created_at)
+      from public.proposals p
+     where p.building_id = v_bid
+       and public.proposal_effective_status(p.status, p.closes_at) = 'closed'
+  )
+  select e.kind, e.entity_id, e.title, e.detail, e.at,
+         (e.at > coalesce(v_seen, '-infinity'::timestamptz))
+    from events e
+   where e.at <= now()
+   order by e.at desc
+   limit greatest(1, least(coalesce(p_limit, 30), 100));
+end $fn$;
+
+create or replace function public.mark_notifications_seen()
+returns void
+language sql volatile security definer set search_path = public
+as $fn$
+  update public.users set notifications_seen_at = now() where id = auth.uid();
+$fn$;
+
 -- =============================================================================
 --  Function grants
 -- =============================================================================
@@ -505,6 +676,10 @@ revoke all on function public.get_building_budget_summary()           from publi
 revoke all on function public.get_proposals(uuid)                     from public, anon;
 revoke all on function public.get_proposal_results(uuid)              from public, anon;
 revoke all on function public.vote_on_proposal(uuid, public.vote_choice, boolean) from public, anon;
+revoke all on function public.reverse_transaction(uuid)               from public, anon;
+revoke all on function public.close_proposal(uuid)                    from public, anon;
+revoke all on function public.get_notifications(int)                  from public, anon;
+revoke all on function public.mark_notifications_seen()               from public, anon;
 
 grant execute on function public.my_building_id()                        to authenticated;
 grant execute on function public.my_role()                               to authenticated;
@@ -517,3 +692,7 @@ grant execute on function public.get_building_budget_summary()           to auth
 grant execute on function public.get_proposals(uuid)                     to authenticated;
 grant execute on function public.get_proposal_results(uuid)              to authenticated;
 grant execute on function public.vote_on_proposal(uuid, public.vote_choice, boolean) to authenticated;
+grant execute on function public.reverse_transaction(uuid)               to authenticated;
+grant execute on function public.close_proposal(uuid)                    to authenticated;
+grant execute on function public.get_notifications(int)                  to authenticated;
+grant execute on function public.mark_notifications_seen()               to authenticated;

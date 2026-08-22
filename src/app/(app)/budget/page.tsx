@@ -5,11 +5,13 @@ import { formatDay, formatMoney, formatMonth } from '@/lib/format';
 import type { BudgetSummary, BudgetTransaction } from '@/lib/database.types';
 
 import { AddTransaction } from './add-transaction';
+import { ReverseButton } from './reverse-button';
 
 export const metadata = { title: 'תקציב' };
 
 export default async function BudgetPage() {
   const profile = await requireProfile();
+  const isVaad = profile.role === 'vaad';
   const supabase = await createClient();
 
   const [{ data: summaryRows }, { data: transactions }, members] = await Promise.all([
@@ -32,6 +34,10 @@ export default async function BudgetPage() {
 
   const rows = transactions ?? [];
   const byMonth = groupByMonth(rows);
+  // a transaction that some later entry mirrors is shown as cancelled
+  const reversed = new Set(
+    rows.map((tx) => tx.reverses_id).filter((id): id is string => id !== null),
+  );
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -46,13 +52,13 @@ export default async function BudgetPage() {
             כל תנועה גלויה לכל דייר. היתרה מחושבת מסכום התנועות עצמן.
           </p>
         </div>
-        {profile.role === 'vaad' && <AddTransaction today={today} />}
+        {isVaad && <AddTransaction today={today} />}
       </div>
 
       <BalanceCard income={income} expense={expense} balance={balance} count={rows.length} />
 
       {rows.length === 0 ? (
-        <EmptyState isVaad={profile.role === 'vaad'} />
+        <EmptyState isVaad={isVaad} />
       ) : (
         <div className="space-y-6">
           {byMonth.map(([month, monthRows], groupIndex) => {
@@ -85,33 +91,63 @@ export default async function BudgetPage() {
                   {monthRows.map((tx) => {
                     const author = members.get(tx.created_by);
                     const isIncome = tx.type === 'income';
+                    const isCancelled = reversed.has(tx.id);
+                    const isCorrection = tx.reverses_id !== null;
 
                     return (
-                      <li key={tx.id} className="flex items-center gap-3 px-5 py-3.5">
+                      <li
+                        key={tx.id}
+                        className={`flex items-center gap-3 px-5 py-3.5 ${
+                          isCancelled ? 'bg-surface-2' : ''
+                        }`}
+                      >
                         <span
                           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                            isIncome
-                              ? 'bg-ok-50 text-ok-500'
-                              : 'bg-danger-50 text-danger-500'
+                            isCancelled
+                              ? 'bg-paper-deep text-ink-3'
+                              : isIncome
+                                ? 'bg-ok-50 text-ok-500'
+                                : 'bg-danger-50 text-danger-500'
                           }`}
                           aria-hidden="true"
                         >
-                          <ArrowIcon up={isIncome} />
+                          {isCorrection ? <UndoIcon /> : <ArrowIcon up={isIncome} />}
                         </span>
 
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold text-ink">
+                          <span
+                            className={`block truncate text-sm font-semibold ${
+                              isCancelled
+                                ? 'text-ink-3 line-through'
+                                : 'text-ink'
+                            }`}
+                          >
                             {tx.description}
                           </span>
-                          <span className="num block text-xs text-ink-3">
+                          <span className="num block truncate text-xs text-ink-3">
                             {formatDay(tx.date)}
                             {author && ` · הוזן על ידי ${author.full_name}`}
                           </span>
                         </span>
 
+                        {isCancelled && (
+                          <span className="badge badge-neutral shrink-0">בוטלה</span>
+                        )}
+
+                        {isVaad && !isCancelled && !isCorrection && (
+                          <ReverseButton
+                            transactionId={tx.id}
+                            description={tx.description}
+                          />
+                        )}
+
                         <span
                           className={`num shrink-0 text-sm font-bold ${
-                            isIncome ? 'text-ok-500' : 'text-danger-500'
+                            isCancelled
+                              ? 'text-ink-3 line-through'
+                              : isIncome
+                                ? 'text-ok-500'
+                                : 'text-danger-500'
                           }`}
                         >
                           {isIncome ? '+' : '−'}
@@ -218,6 +254,15 @@ function EmptyState({ isVaad }: { isVaad: boolean }) {
           : 'כשחברי הוועד יזינו תנועות, הן יופיעו כאן — ולכל דייר תהיה אותה תמונה.'}
       </p>
     </div>
+  );
+}
+
+function UndoIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 5.5 3.5 9 7 12.5" />
+      <path d="M3.5 9h8a5 5 0 0 1 0 10H9" />
+    </svg>
   );
 }
 

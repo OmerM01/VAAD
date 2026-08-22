@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { signOut } from '@/lib/actions/auth';
 import type { Profile } from '@/lib/auth';
 import { Logo } from '@/components/brand';
+import { NotificationBell } from '@/components/notification-bell';
+import type { AppNotification } from '@/lib/database.types';
 
 import { NavTabs, type NavItem } from './nav-tabs';
 
@@ -23,9 +25,11 @@ function initials(name: string) {
 
 export function AppShell({
   profile,
+  notifications,
   children,
 }: {
   profile: Profile;
+  notifications: AppNotification[];
   children: React.ReactNode;
 }) {
   const isVaad = profile.role === 'vaad';
@@ -55,6 +59,8 @@ export function AppShell({
           </div>
 
           <div className="flex shrink-0 items-center gap-3">
+            <NotificationBell items={notifications} />
+
             <div className="hidden items-center gap-2.5 sm:flex">
               <span
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${

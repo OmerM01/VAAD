@@ -419,6 +419,142 @@ check("building B cannot vote in building A", "NOT_FOUND" in json.dumps(data), f
 
 # ---------------------------------------------------------------------------
 
+section("a mistaken transaction is corrected, never erased")
+
+status, data = rpc(T_DAYAR, "reverse_transaction", {"p_transaction_id": tx})
+check("a resident cannot cancel a transaction", "FORBIDDEN" in json.dumps(data), f"{data}")
+
+before = float(rpc(T_VAAD, "get_building_budget_summary")[1][0]["balance"])
+original = get(T_VAAD, f"budget_transactions?id=eq.{tx}&select=type,amount,description")[1][0]
+
+status, new_id = rpc(T_VAAD, "reverse_transaction", {"p_transaction_id": tx})
+check("a vaad member can cancel it", status == 200 and new_id, f"{status} {new_id}")
+
+mirror = get(T_VAAD, f"budget_transactions?id=eq.{new_id}&select=*")[1][0]
+check("the original row is still there",
+      get(T_VAAD, f"budget_transactions?id=eq.{tx}&select=id")[1] != [])
+check("the correction mirrors the type",
+      mirror["type"] != original["type"], f"{original['type']} -> {mirror['type']}")
+check("...and the amount", float(mirror["amount"]) == float(original["amount"]), f"{mirror}")
+check("...and points back at what it cancels", mirror["reverses_id"] == tx, f"{mirror}")
+check("...and says so in its description", mirror["description"].startswith("ביטול:"),
+      f"{mirror['description']}")
+
+after = float(rpc(T_VAAD, "get_building_budget_summary")[1][0]["balance"])
+delta = float(original["amount"]) * (-1 if original["type"] == "income" else 1)
+check("the balance nets the pair out", abs(after - (before + delta)) < 0.001,
+      f"before={before} after={after} expected={before + delta}")
+
+status, data = rpc(T_VAAD, "reverse_transaction", {"p_transaction_id": tx})
+check("the same transaction cannot be cancelled twice",
+      "ALREADY_REVERSED" in json.dumps(data), f"{data}")
+
+status, data = rpc(T_VAAD, "reverse_transaction", {"p_transaction_id": new_id})
+check("a correction cannot itself be cancelled", "IS_A_REVERSAL" in json.dumps(data), f"{data}")
+
+status, data = rpc(T_OTHER, "reverse_transaction", {"p_transaction_id": tx})
+check("another building cannot cancel it", "NOT_FOUND" in json.dumps(data), f"{data}")
+
+
+# ---------------------------------------------------------------------------
+
+section("a vote can be closed early, by the right people")
+
+status, data = insert(T_DAYAR, "proposals", {
+    "building_id": BUILDING, "created_by": U_DAYAR,
+    "title": "לחדש את הצביעה בחדר המדרגות",
+    "creator_anonymous": False, "closes_at": future(days=30),
+}, select="id")
+BY_DAYAR = data[0]["id"]
+
+status, data = insert(T_VAAD, "proposals", {
+    "building_id": BUILDING, "created_by": U_VAAD,
+    "title": "להוסיף עמדת טעינה לרכב חשמלי",
+    "creator_anonymous": False, "closes_at": future(days=30),
+}, select="id")
+BY_VAAD = data[0]["id"]
+
+status, data = rpc(T_OTHER, "close_proposal", {"p_proposal_id": BY_DAYAR})
+check("another building cannot close it", "NOT_FOUND" in json.dumps(data), f"{data}")
+
+status, data = rpc(T_DAYAR, "close_proposal", {"p_proposal_id": BY_VAAD})
+check("a resident cannot close someone else's proposal",
+      "FORBIDDEN" in json.dumps(data), f"{data}")
+
+status, data = rpc(T_DAYAR, "close_proposal", {"p_proposal_id": BY_DAYAR})
+check("the member who raised it can close their own", status in (200, 204), f"{status} {data}")
+
+status, data = rpc(T_VAAD, "close_proposal", {"p_proposal_id": BY_VAAD})
+check("a vaad member can close any proposal", status in (200, 204), f"{status} {data}")
+
+row = rpc(T_DAYAR, "get_proposals", {"p_id": BY_DAYAR})[1][0]
+check("the closed proposal reports status=closed", row["status"] == "closed", f"{row}")
+
+status, data = rpc(T_VAAD, "vote_on_proposal",
+                   {"p_proposal_id": BY_DAYAR, "p_vote": "for", "p_anonymous": False})
+check("no ballots are accepted after an early close",
+      "PROPOSAL_CLOSED" in json.dumps(data), f"{data}")
+
+status, data = rpc(T_VAAD, "close_proposal", {"p_proposal_id": BY_DAYAR})
+check("closing twice is refused", "PROPOSAL_CLOSED" in json.dumps(data), f"{data}")
+
+results = rpc(T_DAYAR, "get_proposal_results", {"p_proposal_id": BY_DAYAR})[1][0]
+check("closing early opens the voter roll too", results["is_closed"] is True, f"{results}")
+
+
+# ---------------------------------------------------------------------------
+
+section("notifications describe the building, not your own actions")
+
+feed = rpc(T_VAAD, "get_notifications", {"p_limit": 50})[1]
+kinds = {n["kind"] for n in feed}
+check("the vaad member sees the resident's fault report", "fault_new" in kinds, f"{kinds}")
+check("...and proposals raised by others", "proposal_new" in kinds, f"{kinds}")
+check("...and closed votes", "proposal_closed" in kinds, f"{kinds}")
+
+own_faults = [n for n in feed if n["kind"] == "fault_new" and n["title"].startswith("המעלית")]
+check("a fault reported by the resident reaches the vaad member", len(own_faults) == 1,
+      f"{own_faults}")
+
+feed_d = rpc(T_DAYAR, "get_notifications", {"p_limit": 50})[1]
+check("the resident is not told about their own fault report",
+      not any(n["kind"] == "fault_new" and n["title"].startswith("המעלית") for n in feed_d),
+      f"{[n['title'] for n in feed_d if n['kind'] == 'fault_new']}")
+check("but is told about the transactions the vaad member recorded",
+      any(n["kind"] == "transaction" for n in feed_d), f"{feed_d}")
+
+anon_items = [n for n in feed if n["kind"] == "proposal_new"
+              and n["title"] == "להחליף את חברת הניקיון"]
+check("an anonymous proposal is announced without naming its author",
+      anon_items and anon_items[0]["detail"] == "הועלתה הצעה חדשה להצבעה", f"{anon_items}")
+
+check("everything is marked new before the bell is opened",
+      all(n["is_new"] for n in feed), f"{[n for n in feed if not n['is_new']][:2]}")
+
+rpc(T_VAAD, "mark_notifications_seen")
+feed = rpc(T_VAAD, "get_notifications", {"p_limit": 50})[1]
+check("opening the bell clears the new markers",
+      not any(n["is_new"] for n in feed), f"{[n for n in feed if n['is_new']][:2]}")
+
+status, data = insert(T_DAYAR, "faults", {
+    "building_id": BUILDING, "reported_by": U_DAYAR,
+    "title": "דלת הכניסה לא ננעלת", "category": "structure",
+})
+feed = rpc(T_VAAD, "get_notifications", {"p_limit": 50})[1]
+fresh = [n for n in feed if n["is_new"]]
+check("a later event comes back marked new again",
+      len(fresh) == 1 and fresh[0]["title"] == "דלת הכניסה לא ננעלת", f"{fresh}")
+
+check("the other building's feed is empty",
+      rpc(T_OTHER, "get_notifications", {"p_limit": 50})[1] == [])
+
+check("a resident cannot move the watermark by hand",
+      patch(T_DAYAR, f"users?id=eq.{U_DAYAR}",
+            {"notifications_seen_at": "2020-01-01T00:00:00Z"})[0] in (401, 403))
+
+
+# ---------------------------------------------------------------------------
+
 section("an anonymous visitor gets nothing at all")
 
 for table in ["buildings", "users", "faults", "budget_transactions", "proposals", "votes"]:

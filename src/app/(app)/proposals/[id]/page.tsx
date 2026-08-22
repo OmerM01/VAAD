@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { requireProfile } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { formatDateTime, relativeTime } from '@/lib/format';
 import { OUTCOME_TEXT, VOTE_LABEL, outcome } from '@/lib/proposals';
@@ -9,6 +10,7 @@ import { Author } from '@/components/author';
 import type { ProposalResults, ProposalView } from '@/lib/database.types';
 
 import { VotePanel } from './vote-panel';
+import { CloseProposalButton } from './close-button';
 
 export const metadata = { title: 'הצעה' };
 
@@ -16,6 +18,7 @@ export default async function ProposalPage({
   params,
 }: PageProps<'/proposals/[id]'>) {
   const { id } = await params;
+  const profile = await requireProfile();
   const supabase = await createClient();
 
   const { data } = await supabase.rpc('get_proposals', { p_id: id });
@@ -33,6 +36,9 @@ export default async function ProposalPage({
 
   const isOpen = proposal.status === 'open';
   const result = outcome(proposal.votes_for, proposal.votes_against);
+  // whoever raised it — anonymously or not — plus any vaad member
+  const canClose = isOpen && (proposal.is_mine || profile.role === 'vaad');
+  const totalVotes = proposal.votes_for + proposal.votes_against;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -91,6 +97,10 @@ export default async function ProposalPage({
           <AlreadyVoted choice={VOTE_LABEL[proposal.my_vote]} />
         ) : (
           <VotePanel proposalId={proposal.id} />
+        )}
+
+        {canClose && (
+          <CloseProposalButton proposalId={proposal.id} totalVotes={totalVotes} />
         )}
       </section>
 
