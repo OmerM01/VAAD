@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ועד בית — מערכת ניהול ועד בית דיגיטלית
 
-## Getting Started
+מערכת לניהול בניין משותף: דיווח תקלות ומעקב אחריהן, תקציב שקוף לכל דייר, והצעות
+שאפשר להצביע עליהן. המערכת תומכת בריבוי בניינים — כל בניין מנהל את הדיירים,
+התקלות והתקציב שלו בנפרד, ואין שום מסלול שדרכו דייר מבניין אחד רואה נתונים של
+בניין אחר.
 
-First, run the development server:
+פרויקט גמר בקורס פולסטאק.
+
+## סטאק
+
+| שכבה   | טכנולוגיה                                  |
+| ------ | ------------------------------------------ |
+| Front  | Next.js 16 (App Router), React 19, TypeScript |
+| Style  | Tailwind CSS v4 עם מערכת עיצוב ייעודית      |
+| Back   | Supabase — Postgres, Auth, Row Level Security |
+| Deploy | Vercel                                     |
+
+## הרצה מקומית
 
 ```bash
+npm install
+cp .env.example .env.local   # ואז למלא את המפתחות של פרויקט ה-Supabase
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### הקמת בסיס הנתונים
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+יש להריץ פעם אחת את `supabase/schema.sql` ב-SQL Editor של Supabase. הקובץ
+אידמפוטנטי — אפשר להריץ אותו שוב אחרי שינויים.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+בנוסף, ב-Supabase Dashboard תחת **Authentication → Sign In / Providers → Email**
+יש לכבות את **Confirm email**. ההרשמה משייכת את המשתמש לבניין מיד אחרי יצירת
+החשבון, ולשם כך דרוש session פעיל בסיום ההרשמה.
 
-## Learn More
+## מודל ההרשאות
 
-To learn more about Next.js, take a look at the following resources:
+ההרשאות נאכפות ב-Postgres, לא בממשק:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **בידוד בין בניינים** — לכל טבלה יש RLS policy שמסננת לפי `building_id` של
+  המשתמש המחובר. פונקציית העזר `my_building_id()` מוגדרת `SECURITY DEFINER` כדי
+  שקריאת `public.users` מתוך policy לא תיצור רקורסיה אינסופית.
+- **פעולות ועד** — עדכון סטטוס תקלה והזנת תנועה כספית חסומים ב-RLS למי
+  ש-`role <> 'vaad'`, ולא רק מוסתרים בממשק.
+- **קודי הצטרפות** — העמודות `dayar_invite_code` / `vaad_invite_code` לא ניתנות
+  ל-`SELECT` על ידי `authenticated` (הרשאה ברמת עמודה). הקוד נבדק רק בתוך
+  `join_building()`, וחברי ועד יכולים לראות אותו שוב דרך `get_invite_codes()`.
+- **אנונימיות אמיתית** — `proposals.created_by` חסום ל-`SELECT`, וב-`votes`
+  מותר לקרוא רק את ההצבעה של עצמך. שמות המציעים והמצביעים מגיעים אך ורק
+  מפונקציות `SECURITY DEFINER` שמכבדות את דגלי האנונימיות, כך שאי אפשר לחשוף
+  מצביע אנונימי דרך ה-API.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## מבנה
 
-## Deploy on Vercel
+```
+src/
+  app/                 עמודי App Router
+  components/          רכיבי UI משותפים
+  lib/
+    database.types.ts  טיפוסים שמשקפים את הסכימה
+    supabase/          לקוחות Supabase (דפדפן / שרת / proxy)
+  proxy.ts             רענון session וחסימת מסלולים פרטיים
+supabase/
+  schema.sql           טבלאות, RLS ופונקציות שרת
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## שלבי הפיתוח
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [x] **1** — אתחול הפרויקט, חיבור Supabase, סכימה + RLS, מערכת עיצוב
+- [ ] **2** — הרשמה והתחברות עם לוגיקת קודי ההצטרפות
+- [ ] **3** — מודול תקלות
+- [ ] **4** — מודול תקציב
+- [ ] **5** — מודול הצעות והצבעה
+- [ ] **6** — דשבורד מסכם
