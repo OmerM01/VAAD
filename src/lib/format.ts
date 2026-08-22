@@ -75,3 +75,23 @@ const DAY = new Intl.DateTimeFormat('he-IL', { day: 'numeric', month: 'short' })
 export function formatDay(iso: string): string {
   return DAY.format(new Date(`${iso}T00:00:00`));
 }
+
+const HOUR_IN_ISRAEL = new Intl.DateTimeFormat('he-IL', {
+  hour: 'numeric',
+  hour12: false,
+  timeZone: 'Asia/Jerusalem',
+});
+
+/**
+ * Rendered on the server, so it must not depend on the server's own clock zone
+ * — a Vercel box runs on UTC, which would greet Israeli residents three hours
+ * out of step.
+ */
+export function greeting(): string {
+  const hour = Number(HOUR_IN_ISRAEL.format(new Date()));
+  if (hour < 5) return 'לילה טוב';
+  if (hour < 12) return 'בוקר טוב';
+  if (hour < 16) return 'צהריים טובים';
+  if (hour < 19) return 'אחר צהריים טובים';
+  return 'ערב טוב';
+}
