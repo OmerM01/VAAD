@@ -5,7 +5,7 @@ import type { Database } from '@/lib/database.types';
 
 /**
  * Supabase client for server components, route handlers and server actions.
- * Must be awaited per request — never hoist it into a module-level singleton.
+ * Create it per request; never hoist it into a module-level singleton.
  */
 export async function createClient() {
   const cookieStore = await cookies();
@@ -24,8 +24,8 @@ export async function createClient() {
               cookieStore.set(name, value, options);
             }
           } catch {
-            // Called from a server component — the middleware refreshes the
-            // session cookies instead, so this is safe to ignore.
+            // Called from a server component. The proxy refreshes the
+            // session cookies instead, so this can be ignored.
           }
         },
       },

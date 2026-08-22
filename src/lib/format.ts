@@ -30,15 +30,15 @@ const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
 ];
 
 /**
- * ICU's Hebrew data spells singular and dual forms as "לפני דקה (1)" and
- * "לפני יומיים (2)" — the parenthetical count is noise in a sentence, so it
- * comes off.
+ * ICU's Hebrew data renders singular and dual forms as "לפני דקה (1)" and
+ * "לפני יומיים (2)". The parenthetical count reads badly in a sentence, so
+ * strip it.
  */
 function tidy(value: string): string {
   return value.replace(/\s*\(\d+\)$/, '');
 }
 
-/** "לפני 3 שעות" — rendered on the server, so no hydration drift. */
+/** Rendered on the server, so there is no hydration mismatch. */
 export function relativeTime(iso: string): string {
   const seconds = (Date.parse(iso) - Date.now()) / 1000;
   const abs = Math.abs(seconds);
@@ -83,9 +83,8 @@ const HOUR_IN_ISRAEL = new Intl.DateTimeFormat('he-IL', {
 });
 
 /**
- * Rendered on the server, so it must not depend on the server's own clock zone
- * — a Vercel box runs on UTC, which would greet Israeli residents three hours
- * out of step.
+ * Rendered on the server, so it must not use the server's own time zone.
+ * Vercel runs on UTC, which would be three hours off for Israeli residents.
  */
 export function greeting(): string {
   const hour = Number(HOUR_IN_ISRAEL.format(new Date()));

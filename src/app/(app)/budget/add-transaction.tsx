@@ -14,9 +14,8 @@ export function AddTransaction({ today }: { today: string }) {
   const formRef = useRef<HTMLFormElement>(null);
   const submitted = useRef(false);
 
-  // A successful insert returns { error: null } rather than redirecting, so the
-  // form clears itself and stays open for the next entry — the common case is
-  // typing in several transactions in a row.
+  // Success returns { error: null } instead of redirecting, so clear the form
+  // and leave it open. Transactions are usually entered several at a time.
   useEffect(() => {
     if (submitted.current && state.error === null) {
       formRef.current?.reset();

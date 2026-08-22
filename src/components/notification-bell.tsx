@@ -48,7 +48,7 @@ export function NotificationBell({ items }: { items: AppNotification[] }) {
   const [open, setOpen] = useState(false);
   const [, startTransition] = useTransition();
   const panelRef = useRef<HTMLDivElement>(null);
-  // frozen at mount so the "new" markers do not disappear while being read
+  // Frozen at mount so the "new" markers stay put while the panel is open.
   const [snapshot] = useState(items);
 
   const unread = items.filter((item) => item.is_new).length;

@@ -10,10 +10,10 @@ import { VOTING_PERIODS, isVoteChoice } from '@/lib/proposals';
 import type { ActionState } from '@/lib/actions/state';
 
 /**
- * Any member may raise a proposal.
- * creator_anonymous is stored on the row, but the anonymity itself is enforced
- * by get_proposals(): created_by is not readable over the API at all, so an
- * anonymous proposal cannot be traced back by joining against public.users.
+ * Any member may raise a proposal. creator_anonymous is stored on the row, but
+ * the anonymity itself comes from get_proposals(): created_by is not readable
+ * over the API at all, so an anonymous proposal cannot be traced back by
+ * joining against public.users.
  */
 export async function createProposal(
   _prev: ActionState,
@@ -58,7 +58,7 @@ export async function createProposal(
 
 /**
  * One ballot per member. vote_on_proposal() re-checks the building, that the
- * vote is still open, and that no earlier ballot exists — and the
+ * vote is still open, and that no earlier ballot exists. The
  * (proposal_id, user_id) unique constraint backs it up if two requests race.
  */
 export async function voteOnProposal(

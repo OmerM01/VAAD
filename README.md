@@ -1,149 +1,167 @@
-# ועד בית — מערכת ניהול ועד בית דיגיטלית
+# Vaad Bait — building committee management
 
-מערכת לניהול בניין משותף: דיווח תקלות ומעקב אחריהן, תקציב שקוף לכל דייר, והצעות
-שאפשר להצביע עליהן. המערכת תומכת בריבוי בניינים — כל בניין מנהל את הדיירים,
-התקלות והתקציב שלו בנפרד, ואין שום מסלול שדרכו דייר מבניין אחד רואה נתונים של
-בניין אחר.
+A web app for running a residential building committee: fault reports with a
+visible status, a budget every resident can see, and proposals the building can
+vote on. It supports many buildings at once. Each building keeps its own
+residents, faults and budget, and there is no path by which a resident of one
+building can reach another building's data.
 
-פרויקט גמר בקורס פולסטאק.
+Final project for a full-stack course. The interface is in Hebrew and
+right-to-left.
 
-**האתר החי:** https://vaad-one.vercel.app
+**Live:** https://vaad-one.vercel.app
 
-## הבעיה
+## The problem
 
-היום ניהול ועד בית קורה בקבוצת וואטסאפ ובקובץ אקסל שרק לגזבר יש גישה אליו. דייר
-מדווח על תקלה ולא יודע אם מישהו טיפל בה, אף אחד לא באמת יודע לאן הולך הכסף,
-והצעות נגמרות בהודעות בקבוצה בלי מסקנה. המערכת נותנת לכל אלה מקום אחד: תקלות עם
-סטטוס ברור, תקציב שקוף, והצעות שמגיעות להכרעה בתאריך ידוע.
+Building committees are usually run from a WhatsApp group plus a spreadsheet
+only the treasurer can open. A resident reports a fault and never learns whether
+anyone dealt with it, nobody really knows where the money goes, and suggestions
+disappear into the group chat without a decision. This app gives each of those a
+place: faults with a clear status, a budget open to everyone, and proposals that
+close on a known date.
 
-## סטאק
+## Stack
 
-| שכבה   | טכנולוגיה                                     |
+| Layer  | Technology                                    |
 | ------ | --------------------------------------------- |
 | Front  | Next.js 16 (App Router), React 19, TypeScript |
-| Style  | Tailwind CSS v4 עם מערכת עיצוב ייעודית         |
+| Style  | Tailwind CSS v4 with a project-specific theme |
 | Back   | Supabase — Postgres, Auth, Row Level Security |
 | Deploy | Vercel                                        |
 
-## הרצה מקומית
+## Roles
+
+A building has two kinds of member:
+
+- **Resident (`dayar`)** — reports faults, reads the budget, raises proposals and
+  votes on them.
+- **Committee member (`vaad`)** — everything a resident can do, plus updating
+  fault statuses and recording budget transactions. A building can have several.
+
+The first user to create a building becomes a committee member and receives two
+invite codes, one per role. Everyone else signs up with a code, which decides
+both the building and the role. After that, sign-in is email and password only.
+
+## Running locally
 
 ```bash
 npm install
-cp .env.example .env.local   # ואז למלא את המפתחות של פרויקט ה-Supabase
+cp .env.example .env.local   # then fill in the Supabase keys
 npm run dev
 ```
 
-### הקמת בסיס הנתונים
+### Database setup
 
-1. להריץ פעם אחת את [`supabase/schema.sql`](supabase/schema.sql) ב-SQL Editor של
-   Supabase. הקובץ אידמפוטנטי — אפשר להריץ אותו שוב אחרי שינויים.
-   האזהרה `Potential issue detected` צפויה: הסקריפט מכיל `drop policy if exists`
-   ו-`revoke`, ושניהם מכוונים.
-2. ב-**Authentication → Sign In / Providers → Email** לכבות את **Confirm email**.
-   ההרשמה משייכת את המשתמש לבניין מיד אחרי יצירת החשבון, ולשם כך דרוש session
-   פעיל בסיום ההרשמה.
-3. ב-**Authentication → URL Configuration** להגדיר את **Site URL** לכתובת
-   הפרודקשן, ולהוסיף ל-**Redirect URLs** גם את `http://localhost:3000/**`.
-   בלי זה הקישור במייל איפוס הסיסמה יחזור לכתובת ברירת המחדל במקום לאפליקציה —
-   Supabase לא מחזיר שגיאה על כתובת שאינה ברשימה, הוא פשוט מתעלם ממנה.
+1. Run [`supabase/schema.sql`](supabase/schema.sql) once in the Supabase SQL
+   Editor. The file is idempotent and can be re-run after changes. The
+   `Potential issue detected` warning is expected: the script contains
+   `drop policy if exists` and `revoke`, both intentional.
+2. Under **Authentication → Sign In / Providers → Email**, turn **Confirm email**
+   off. Signup attaches the user to a building immediately after the account is
+   created, which needs an active session at the end of signup.
+3. Under **Authentication → URL Configuration**, set **Site URL** to the
+   production address and add `http://localhost:3000/**` to **Redirect URLs**.
+   Without this the password-reset link returns to the default address instead of
+   the app: Supabase does not report an error for a URL that is not on the list,
+   it simply ignores it.
 
-### פריסה ל-Vercel
+### Deploying
 
-לייבא את ה-repository ב-Vercel, ולהגדיר תחת **Settings → Environment Variables**
-את `NEXT_PUBLIC_SUPABASE_URL` ו-`NEXT_PUBLIC_SUPABASE_ANON_KEY` באותם ערכים
-שב-`.env.local`. אין צורך בהגדרת build — Vercel מזהה Next.js לבד.
+Import the repository on Vercel and set `NEXT_PUBLIC_SUPABASE_URL` and
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` under **Settings → Environment Variables**. No
+build configuration is needed; Vercel detects Next.js on its own.
 
-## מודל ההרשאות
+## Permission model
 
-ההרשאות נאכפות ב-Postgres, לא בממשק. הממשק מסתיר כפתורים; בסיס הנתונים הוא זה
-שמסרב.
+Permissions are enforced in Postgres, not in the interface. The UI hides
+buttons; the database is what refuses.
 
-- **בידוד בין בניינים** — לכל טבלה יש RLS policy שמסננת לפי `building_id` של
-  המשתמש המחובר. פונקציית העזר `my_building_id()` מוגדרת `SECURITY DEFINER` כדי
-  שקריאת `public.users` מתוך policy לא תיצור רקורסיה אינסופית.
-- **פעולות ועד** — עדכון סטטוס תקלה והזנת תנועה כספית חסומים ב-RLS למי
-  ש-`role <> 'vaad'`. יתרה מזאת, ההרשאה על `faults` מוגבלת לעמודת `status`
-  בלבד, כך שגם חבר ועד לא יכול לשכתב כותרת של תקלה שדייר אחר דיווח.
-- **קודי הצטרפות** — העמודות `dayar_invite_code` / `vaad_invite_code` לא ניתנות
-  ל-`SELECT` על ידי `authenticated` (הרשאה ברמת עמודה). הקוד נבדק רק בתוך
-  `join_building()`, וחברי ועד יכולים לראות אותו שוב דרך `get_invite_codes()`.
-- **אנונימיות אמיתית** — `proposals.created_by` חסום ל-`SELECT` לגמרי, וב-`votes`
-  מותר לקרוא רק את ההצבעה של עצמך. שמות המציעים והמצביעים מגיעים אך ורק
-  מפונקציות `SECURITY DEFINER` שמכבדות את דגלי האנונימיות. בלי זה, "הצבעה
-  אנונימית" הייתה דגל תצוגה בלבד — כל דייר היה יכול לקרוא את הטבלה דרך ה-API
-  ולראות מי הצביע מה.
-- **יתרה מחושבת** — אין עמודת יתרה שמורה. `get_building_budget_summary()` סוכם
-  את התנועות בזמן הקריאה, כך שאין מצב שהיתרה יוצאת מסנכרון עם הספר.
-- **סגירה אוטומטית של הצבעה** — `proposal_effective_status()` מחשב את מצב ההצעה
-  מ-`closes_at` בזמן הקריאה, בלי משימה מתוזמנת. הצעה שעבר זמנה *היא* סגורה,
-  ורשימת המצביעים נפתחת באותו רגע. סגירה מוקדמת דרך `close_proposal()` פתוחה
-  למי שהעלה את ההצעה ולחברי ועד — כולל מי שהעלה אותה אנונימית, כי `is_mine`
-  מגיע מפונקציה שיודעת מי הוא מבלי לחשוף את שמו לאחרים.
-- **ספר תנועות שלא נמחק** — אין `UPDATE` או `DELETE` על `budget_transactions`.
-  תיקון טעות נעשה דרך `reverse_transaction()`, שרושמת תנועת מראה בסכום זהה
-  ובסוג הפוך ומצביעה חזרה למקור. היתרה מתאזנת מעצמה כי היא ממילא סכום השורות,
-  ואינדקס ייחודי על `reverses_id` מונע ביטול כפול.
-- **בניין לא נשאר יתום** — מפתחות הזרים מדרדרים רק כלפי מטה: מחיקת בניין מוחקת
-  את דייריו, אבל מחיקת הדייר האחרון הותירה בניין ריק שאיש לא רואה — ושעדיין
-  מחזיק שני קודי הצטרפות תקפים. טריגר על מחיקת דייר מסלק בניין שנשאר בלי אף
-  חבר. התנאי `b.id = old.building_id` הוא מה שמונע רקורסיה בכיוון ההפוך.
-- **התראות נגזרות בזמן קריאה** — `get_notifications()` בונה את הפיד ב-`UNION`
-  מעל השורות הקיימות. אין טבלת אירועים, אין טריגרים, ואין מה למלא רטרואקטיבית,
-  ולכן הפיד לא יכול לסתור את הנתונים. הפיד מדלג על פעולות שהקורא עצמו ביצע,
-  ומכבד אנונימיות גם כאן: הצעה אנונימית מוכרזת בלי שם מעליה. סימן המים
-  `users.notifications_seen_at` לא ניתן לכתיבה מהלקוח.
+- **Isolation between buildings.** Every table has an RLS policy filtering on the
+  signed-in user's `building_id`. The helper `my_building_id()` is
+  `SECURITY DEFINER` so that reading `public.users` from inside a policy does not
+  recurse infinitely.
+- **Committee actions.** Updating a fault status and recording a transaction are
+  blocked by RLS for anyone whose `role <> 'vaad'`. The grant on `faults` is also
+  narrowed to the `status` column, so not even a committee member can rewrite the
+  title of a fault someone else reported.
+- **Invite codes.** `dayar_invite_code` and `vaad_invite_code` are not selectable
+  by `authenticated` (a column-level grant). A code is only ever matched inside
+  `join_building()`, and committee members read theirs back through
+  `get_invite_codes()`.
+- **Anonymity.** `proposals.created_by` is not selectable at all, and on `votes` a
+  member can read only their own row. Proposer and voter names come only from
+  `SECURITY DEFINER` functions that honour the anonymity flags. Without this,
+  "anonymous vote" would be a display-only flag: any resident could read the
+  table through the API and see who voted what.
+- **Derived balance.** There is no stored balance column.
+  `get_building_budget_summary()` sums the transactions on read, so the balance
+  cannot drift out of sync with the ledger.
+- **Vote closing.** `proposal_effective_status()` derives a proposal's state from
+  `closes_at` at read time, with no scheduled job. A proposal past its date is
+  closed, and the voter roll opens at that moment. `close_proposal()` allows an
+  early close by the member who raised it or by any committee member, including
+  for an anonymous proposal: `is_mine` comes from a function that knows who the
+  author is without revealing the name to anyone else.
+- **Append-only ledger.** There is no `UPDATE` or `DELETE` on
+  `budget_transactions`. A mistake is corrected through `reverse_transaction()`,
+  which records a mirror entry of the same amount and opposite type pointing back
+  at the original. The balance nets out because it is a sum of the rows, and a
+  unique index on `reverses_id` prevents cancelling the same entry twice.
+- **Notifications derived on read.** `get_notifications()` builds the feed with a
+  `UNION` over existing rows. There is no events table to keep in sync and
+  nothing to backfill, so the feed cannot contradict the data. It skips actions
+  the reader performed, and an anonymous proposal is announced without a name.
+  The `users.notifications_seen_at` watermark is not writable from the client.
+- **Orphan buildings.** Foreign keys only cascade downwards, so removing the last
+  member used to leave a building behind: invisible, but still holding two valid
+  invite codes. A trigger on member deletion drops a building once nobody is left
+  in it.
 
-## בדיקות
+## Tests
 
 ```bash
 python tests/rls_test.py
 ```
 
-הבדיקות לא עוברות דרך האפליקציה — הן פונות ישירות ל-REST API של Supabase עם token
-של דייר רגיל, בדיוק כמו שדייר יכול לעשות מה-console של הדפדפן. כל מה שעובר שם
-נכון ללא תלות במה שהממשק בוחר להציג. 89 בדיקות: שיוך תפקידים לפי קוד, חסימת
-פעולות ועד, בידוד מלא בין בניינים, אנונימיות של מציעים ומצביעים, מניעת הצבעה
-כפולה, ביטול תנועה שמשאיר את המקור בספר, סגירת הצבעה מוקדמת, פיד התראות
-שמדלג על הפעולות שלך, ואפס גישה למשתמש לא מחובר.
+The tests do not go through the Next.js app. They call the Supabase REST API
+directly with an ordinary member's token, which is what a resident could do from
+the browser console, so what passes there holds regardless of what the interface
+shows. 89 checks covering role assignment by invite code, committee-only actions,
+isolation between buildings, proposer and voter anonymity, one ballot per member,
+transaction reversal, early vote closing, the notification feed, and zero access
+for a signed-out visitor.
 
-כל הרצה יוצרת לעצמה חשבונות זמניים ומדפיסה בסוף את משפט הניקוי שלהם.
+Each run creates its own throwaway accounts and prints the cleanup statement at
+the end.
 
-## מבנה
+## Layout
 
 ```
 src/
   app/
-    (auth)/            התחברות והרשמה
-    (app)/             מסכי האפליקציה מאחורי בדיקת הרשאות
-      dashboard/       סקירה מסכמת
-      faults/          תקלות
-      budget/          תקציב
-      proposals/       הצעות והצבעות
-    welcome/           השלמת שיוך לבניין אחרי הרשמה שנקטעה
-  components/          רכיבי UI משותפים
+    (auth)/            sign in, sign up, password reset
+    (app)/             screens behind the permission check
+      dashboard/       summary
+      faults/          fault reports
+      budget/          ledger
+      proposals/       proposals and voting
+    auth/reset/        password-reset callback
+    welcome/           completes a signup that stopped before joining a building
+  components/          shared UI
   lib/
-    actions/           Server Actions
-    database.types.ts  טיפוסים שמשקפים את הסכימה
-    supabase/          לקוחות Supabase (דפדפן / שרת / proxy)
-  proxy.ts             רענון session וחסימת מסלולים פרטיים
+    actions/           server actions
+    database.types.ts  types mirroring the schema
+    supabase/          server and proxy clients
+  proxy.ts             session refresh and private-route guard
 supabase/
-  schema.sql           טבלאות, RLS ופונקציות שרת
+  schema.sql           tables, RLS and server-side functions
 tests/
-  rls_test.py          בדיקות אבטחה מול ה-API
+  rls_test.py          API-level security tests
 ```
 
-## שלבי הפיתוח
+## Not included
 
-- [x] **1** — אתחול הפרויקט, חיבור Supabase, סכימה + RLS, מערכת עיצוב
-- [x] **2** — הרשמה והתחברות עם לוגיקת קודי ההצטרפות
-- [x] **3** — מודול תקלות
-- [x] **4** — מודול תקציב
-- [x] **5** — מודול הצעות והצבעה
-- [x] **6** — דשבורד מסכם
-
-## מה לא נכלל
-
-- ההתראות הן בתוך האפליקציה בלבד. אין שליחת מייל או פוש — זה היה דורש שירות
-  מיילים חיצוני ומשימה מתוזמנת, ושניהם מחוץ לסטאק שהוגדר לפרויקט.
-- אין תזכורת יזומה לפני שהצבעה נסגרת; הפיד מדווח על הסגירה אחרי שקרתה.
-- אין העלאת קבצים — למשל תמונה של התקלה או צילום של קבלה.
+- Notifications are in-app only. Email and push would need an external mail
+  service and a scheduled job, both outside the stack set for this project.
+- No reminder before a vote closes; the feed reports the close after it happens.
+- No file uploads, such as a photo of a fault or a scan of a receipt.

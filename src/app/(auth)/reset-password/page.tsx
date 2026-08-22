@@ -7,9 +7,9 @@ import { ResetPasswordForm } from './reset-form';
 export const metadata = { title: 'סיסמה חדשה' };
 
 /**
- * Reached only after /auth/reset exchanged the emailed code for a session.
- * Without one there is nothing to update, so the visitor goes back to ask for
- * a fresh link.
+ * Only reachable once /auth/reset has exchanged the emailed code for a session.
+ * Without one there is nothing to update, so send the visitor back to request
+ * a new link.
  */
 export default async function ResetPasswordPage() {
   const supabase = await createClient();

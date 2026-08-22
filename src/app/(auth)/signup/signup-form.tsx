@@ -56,7 +56,7 @@ export function SignupForm({ initialMode = 'join' }: { initialMode?: Mode }) {
   );
 }
 
-/** email / password / name — identical in both flows. */
+/** Account fields, identical in both signup flows. */
 function AccountFields() {
   return (
     <>

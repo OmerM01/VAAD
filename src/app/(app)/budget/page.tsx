@@ -25,8 +25,8 @@ export default async function BudgetPage() {
     getMembers(),
   ]);
 
-  // The balance always comes back from the RPC, which sums the transactions —
-  // there is no stored balance column that could drift out of sync.
+  // Balance comes from the RPC, which sums the transactions. There is no
+  // stored balance column that could drift out of sync.
   const raw = (summaryRows?.[0] ?? {}) as Partial<BudgetSummary>;
   const income = Number(raw.total_income ?? 0);
   const expense = Number(raw.total_expense ?? 0);
@@ -34,7 +34,7 @@ export default async function BudgetPage() {
 
   const rows = transactions ?? [];
   const byMonth = groupByMonth(rows);
-  // a transaction that some later entry mirrors is shown as cancelled
+  // A transaction that a later entry mirrors is shown as cancelled.
   const reversed = new Set(
     rows.map((tx) => tx.reverses_id).filter((id): id is string => id !== null),
   );

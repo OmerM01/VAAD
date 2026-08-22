@@ -3,11 +3,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 /**
- * Landing point for the link in the password-reset email.
+ * Landing point for the password-reset email link.
  *
- * Supabase verifies the token on its side and sends the visitor here with a
- * one-time code. Exchanging it establishes a session, which is what allows the
- * next screen to call updateUser({ password }).
+ * Supabase verifies the token and redirects here with a one-time code.
+ * Exchanging it opens a session, which /reset-password needs in order to call
+ * updateUser({ password }).
  */
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code');

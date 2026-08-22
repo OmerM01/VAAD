@@ -1,7 +1,7 @@
 /**
- * Turns raw Postgres / GoTrue errors into something a resident can act on.
- * The RPCs in schema.sql raise bare codes (INVALID_CODE, ALREADY_VOTED …) so
- * the wording lives here in one place rather than in the database.
+ * Maps raw Postgres and GoTrue errors to messages a resident can act on.
+ * The RPCs in schema.sql raise bare codes (INVALID_CODE, ALREADY_VOTED), so the
+ * wording lives here rather than in the database.
  */
 
 const MESSAGES: Record<string, string> = {
@@ -42,7 +42,7 @@ export function toHebrewError(
 
   const raw = error.message ?? '';
 
-  // plpgsql raises arrive as `AUTH_REQUIRED` or wrapped in a longer sentence
+  // plpgsql raises arrive bare or wrapped inside a longer sentence.
   for (const key of Object.keys(MESSAGES)) {
     if (raw === key || raw.includes(key)) return MESSAGES[key];
   }

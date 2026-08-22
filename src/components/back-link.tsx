@@ -5,13 +5,11 @@ import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
 
 /**
- * Steps back through history when there is somewhere to go back to, and falls
- * back to the home page when the visitor landed here directly — a plain
- * router.back() on a fresh tab leaves people staring at the same screen.
+ * Goes back in history, falling back to `fallback` when the page was opened
+ * directly. router.back() on a fresh tab does nothing, which looks broken.
  *
- * It renders as a real link to `fallback`, so it still works before hydration
- * and shows a sensible target on hover; the handler only takes over when there
- * is genuine history behind it.
+ * Rendered as a real link so it works before hydration; the click handler only
+ * takes over when there is history to go back to.
  */
 export function BackLink({
   fallback = '/',

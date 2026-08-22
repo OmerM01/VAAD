@@ -1,5 +1,5 @@
 -- =============================================================================
---  ועד בית דיגיטלי  —  Database schema, RLS policies and server-side RPCs
+--  Vaad Bait  -  database schema, RLS policies and server-side RPCs
 --  Run this whole file once in the Supabase SQL Editor.
 --  It is idempotent: safe to re-run after edits.
 -- =============================================================================
@@ -40,7 +40,7 @@ create table if not exists public.users (
 );
 create index if not exists users_building_idx on public.users (building_id);
 
--- watermark for the notification bell: everything newer than this is "new"
+-- Watermark for the notification bell: anything newer than this is unread.
 alter table public.users
   add column if not exists notifications_seen_at timestamptz not null default now();
 
@@ -68,7 +68,7 @@ create table if not exists public.budget_transactions (
   created_at  timestamptz not null default now()
 );
 -- A recorded transaction is never edited or deleted. A mistake is corrected by
--- a mirror transaction pointing back at it, which keeps the audit trail intact.
+-- a mirror transaction pointing back at it, so the audit trail stays intact.
 alter table public.budget_transactions
   add column if not exists reverses_id uuid
   references public.budget_transactions (id) on delete cascade;
@@ -103,7 +103,7 @@ create table if not exists public.votes (
 );
 create index if not exists votes_proposal_idx on public.votes (proposal_id);
 
--- keep faults.updated_at fresh
+-- Keeps faults.updated_at current.
 create or replace function public.touch_updated_at()
 returns trigger language plpgsql as $fn$
 begin new.updated_at := now(); return new; end $fn$;
@@ -114,15 +114,15 @@ create trigger faults_touch_updated_at
   for each row execute function public.touch_updated_at();
 
 -- The foreign keys only cascade downwards: deleting a building removes its
--- members, but removing the last member used to leave the building behind as an
--- orphan — invisible to everyone, yet still holding two working invite codes.
--- This puts the building away once nobody is left in it.
+-- members, but removing the last member left the building behind as an orphan,
+-- invisible to everyone yet still holding two working invite codes. This drops
+-- a building once nobody is left in it.
 --
--- The `b.id = old.building_id` predicate is what makes this safe in the other
--- direction too: when the building itself is being deleted, its members go via
--- the FK cascade and this trigger fires for each of them, but by then the
--- building row is no longer visible to the nested command, so the delete simply
--- matches nothing instead of recursing.
+-- The b.id = old.building_id predicate keeps this safe in the other direction.
+-- When the building itself is deleted its members go via the FK cascade and
+-- this trigger fires for each of them, but by then the building row is no
+-- longer visible to the nested command, so the delete matches nothing instead
+-- of recursing.
 create or replace function public.drop_empty_building()
 returns trigger
 language plpgsql security definer set search_path = public
@@ -142,7 +142,7 @@ create trigger users_drop_empty_building
 -- =============================================================================
 --  Identity helpers
 --  SECURITY DEFINER so they can read public.users without re-triggering the RLS
---  policies that call them (which would recurse infinitely).
+--  policies that call them, which would recurse infinitely.
 -- =============================================================================
 
 create or replace function public.my_building_id()
@@ -172,8 +172,8 @@ alter table public.proposals           enable row level security;
 alter table public.votes               enable row level security;
 
 -- ---------- buildings ----------
--- Members read their own building only. Rows are created exclusively through
--- create_building(); invite codes are additionally hidden by the column grants.
+-- Members read their own building only. Rows are created only through
+-- create_building(). Invite codes are hidden separately, by the column grants.
 drop policy if exists buildings_select_own on public.buildings;
 create policy buildings_select_own on public.buildings
   for select to authenticated
@@ -202,7 +202,7 @@ create policy faults_insert_member on public.faults
   for insert to authenticated
   with check (building_id = public.my_building_id() and reported_by = auth.uid());
 
--- status changes are a vaad-only capability, enforced here and not only in the UI
+-- Status changes are vaad-only, enforced here and not only in the UI.
 drop policy if exists faults_update_vaad on public.faults;
 create policy faults_update_vaad on public.faults
   for update to authenticated
@@ -232,9 +232,9 @@ create policy proposals_insert_member on public.proposals
   with check (building_id = public.my_building_id() and created_by = auth.uid());
 
 -- ---------- votes ----------
--- A member may read only their own ballot. Everything aggregated goes through
--- get_proposal_results(), which is what makes voter_anonymous actually mean
--- something rather than being a display-only flag.
+-- A member may read only their own ballot. Aggregates go through
+-- get_proposal_results(). Without this, voter_anonymous would be a display-only
+-- flag: anyone could read the table and see who voted what.
 drop policy if exists votes_select_own on public.votes;
 create policy votes_select_own on public.votes
   for select to authenticated
@@ -253,16 +253,16 @@ create policy votes_insert_own on public.votes
 
 -- =============================================================================
 --  Column & table grants
---  Supabase grants ALL on public tables by default; we narrow that down.
+--  Supabase grants ALL on public tables by default. These narrow it down.
 -- =============================================================================
 
 revoke all on public.buildings, public.users, public.faults,
               public.budget_transactions, public.proposals, public.votes
   from anon, authenticated;
 
--- Invite codes are deliberately NOT selectable — they are only ever matched
--- inside join_building(), handed back once by create_building(), and re-read
--- by vaad members through get_invite_codes().
+-- Invite codes are deliberately not selectable. They are matched inside
+-- join_building(), returned once by create_building(), and re-read by vaad
+-- members through get_invite_codes().
 grant select (id, name, address, created_at) on public.buildings to authenticated;
 
 grant select on public.users to authenticated;
@@ -274,7 +274,7 @@ grant update (status) on public.faults to authenticated;
 grant select, insert on public.budget_transactions to authenticated;
 
 -- created_by stays hidden so an anonymous proposal cannot be de-anonymised by
--- joining against public.users; names come from get_proposals() instead.
+-- joining against public.users. Names come from get_proposals() instead.
 grant select (id, building_id, title, description, creator_anonymous,
               closes_at, status, created_at) on public.proposals to authenticated;
 grant insert on public.proposals to authenticated;
@@ -290,7 +290,7 @@ returns text
 language plpgsql volatile set search_path = public
 as $fn$
 declare
-  alphabet constant text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; -- no look-alike chars
+  alphabet constant text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; -- no look-alikes
   code text := '';
   i int;
 begin
@@ -394,7 +394,7 @@ end $fn$;
 --  Budget
 -- =============================================================================
 
--- Balance is always derived from the transactions, never stored on a column.
+-- Balance is derived from the transactions, never stored on a column.
 create or replace function public.get_building_budget_summary()
 returns table (total_income numeric, total_expense numeric, balance numeric, tx_count int)
 language sql stable set search_path = public
@@ -461,7 +461,7 @@ begin
     order by public.proposal_effective_status(p.status, p.closes_at) asc, p.created_at desc;
 end $fn$;
 
--- Tally plus, once the vote is closed, the roll of voters.
+-- Tally, plus the roll of voters once the vote has closed.
 create or replace function public.get_proposal_results(p_proposal_id uuid)
 returns table (
   votes_for     int,
@@ -501,7 +501,7 @@ begin
         where v.proposal_id = v_p.id), '[]'::jsonb) end;
 end $fn$;
 
--- One ballot per member: checked before insert, and backed by a unique constraint.
+-- One ballot per member, checked before insert and backed by a unique constraint.
 create or replace function public.vote_on_proposal(
   p_proposal_id uuid,
   p_vote        public.vote_choice,
@@ -532,9 +532,9 @@ begin
   values (p_proposal_id, v_uid, p_vote, coalesce(p_anonymous, false));
 end $fn$;
 
--- Corrects a mistaken entry by recording its mirror image rather than editing or
--- deleting it, so the ledger stays append-only and the net balance still comes
--- out right.
+-- Corrects a mistaken entry by recording its mirror image instead of editing or
+-- deleting it. The ledger stays append-only and the net balance still comes out
+-- right.
 create or replace function public.reverse_transaction(p_transaction_id uuid)
 returns uuid
 language plpgsql volatile security definer set search_path = public
@@ -571,8 +571,8 @@ begin
   return v_new;
 end $fn$;
 
--- Ends the voting early. Open to the member who raised the proposal — including
--- an anonymous one, since only they ever see the button — and to any vaad member.
+-- Ends the voting early. Open to the member who raised the proposal, including
+-- an anonymous one since only they see the button, and to any vaad member.
 create or replace function public.close_proposal(p_proposal_id uuid)
 returns void
 language plpgsql volatile security definer set search_path = public
@@ -599,8 +599,8 @@ end $fn$;
 -- =============================================================================
 --  Notifications
 --
---  Derived on read from rows that already exist — there is no events table to
---  keep in sync and nothing to backfill. "New" means it happened after the
+--  Derived on read from rows that already exist. There is no events table to
+--  keep in sync and nothing to backfill. Unread means it happened after the
 --  reader last opened the bell.
 -- =============================================================================
 
@@ -657,7 +657,7 @@ begin
      where t.building_id = v_bid and t.created_by <> v_uid
 
     union all
-    -- someone else raised a proposal; an anonymous one stays anonymous here too
+    -- someone else raised a proposal; an anonymous one stays anonymous here
     select 'proposal_new', p.id, p.title,
            case when p.creator_anonymous then 'הועלתה הצעה חדשה להצבעה'
                 else u.full_name || ' העלה הצעה חדשה להצבעה' end,

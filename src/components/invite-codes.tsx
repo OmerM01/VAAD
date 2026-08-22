@@ -78,8 +78,8 @@ function CodeBlock({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // clipboard blocked (insecure origin / permissions) — the code is on
-      // screen anyway, so there is nothing useful to report here.
+      // Clipboard blocked by permissions or an insecure origin. The code is
+      // visible on screen, so there is nothing useful to report.
     }
   }
 

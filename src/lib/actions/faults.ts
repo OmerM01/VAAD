@@ -10,10 +10,9 @@ import { isFaultCategory, isFaultStatus } from '@/lib/faults';
 import type { ActionState } from '@/lib/actions/state';
 
 /**
- * Any member of the building may report a fault.
- * building_id and reported_by are filled from the session rather than the form,
- * and the RLS insert policy re-checks both — a forged building_id is rejected
- * by Postgres, not by this function.
+ * Any member of the building may report a fault. building_id and reported_by
+ * come from the session rather than the form, and the RLS insert policy
+ * re-checks both, so a forged building_id is rejected by Postgres.
  */
 export async function createFault(
   _prev: ActionState,
@@ -50,9 +49,9 @@ export async function createFault(
 }
 
 /**
- * Vaad members only. The check below is for the error message; the actual
- * enforcement is the faults_update_vaad RLS policy, which a dayar cannot pass
- * even by calling the REST API directly.
+ * Vaad members only. The check below produces the error message; enforcement is
+ * the faults_update_vaad RLS policy, which a dayar cannot pass even by calling
+ * the REST API directly.
  */
 export async function updateFaultStatus(
   _prev: ActionState,

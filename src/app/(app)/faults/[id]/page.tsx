@@ -32,7 +32,7 @@ export default async function FaultPage({ params }: PageProps<'/faults/[id]'>) {
   ]);
 
   // RLS hides faults from other buildings, so "not visible" and "does not
-  // exist" collapse into the same 404 — no cross-building probing.
+  // exist" both end up as a 404. Ids cannot be probed across buildings.
   if (!fault) notFound();
 
   const reporter = members.get(fault.reported_by);

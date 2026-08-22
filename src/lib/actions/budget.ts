@@ -10,9 +10,9 @@ import type { ActionState } from '@/lib/actions/state';
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * Vaad members only. As with faults, the role check here exists to produce a
- * readable message — the budget_insert_vaad RLS policy is what actually stops
- * a dayar, including one calling the REST API directly.
+ * Vaad members only. The role check here only produces a readable message; the
+ * budget_insert_vaad RLS policy is what stops a dayar, including one calling
+ * the REST API directly.
  */
 export async function createTransaction(
   _prev: ActionState,
@@ -65,8 +65,8 @@ export async function createTransaction(
 
 /**
  * Cancels a mistaken entry by recording its mirror image. Nothing is edited or
- * deleted, so the ledger keeps a full audit trail and the balance still nets
- * out correctly. Vaad only, enforced inside reverse_transaction().
+ * deleted, so the ledger keeps its audit trail and the balance still nets out.
+ * Vaad only, enforced inside reverse_transaction().
  */
 export async function reverseTransaction(
   _prev: ActionState,

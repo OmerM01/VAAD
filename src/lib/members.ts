@@ -11,9 +11,9 @@ export type Member = {
 };
 
 /**
- * Everyone in the caller's building, keyed by id.
- * RLS already scopes this to a single building, and a building holds tens of
- * residents at most — cheaper and clearer than embedding a join in every query.
+ * Everyone in the caller's building, keyed by id. RLS already scopes this to
+ * one building, and a building holds at most tens of residents, so this is
+ * cheaper and clearer than embedding a join in every query.
  */
 export const getMembers = cache(async (): Promise<Map<string, Member>> => {
   const supabase = await createClient();

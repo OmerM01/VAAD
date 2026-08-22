@@ -16,7 +16,7 @@ export function isVoteChoice(value: unknown): value is VoteChoice {
   return value === 'for' || value === 'against';
 }
 
-/** Share of "for" votes, used for the result bar. Ties render as an even split. */
+/** Share of "for" votes, used by the result bar. Ties render as an even split. */
 export function forShare(votesFor: number, votesAgainst: number): number {
   const total = votesFor + votesAgainst;
   if (total === 0) return 50;

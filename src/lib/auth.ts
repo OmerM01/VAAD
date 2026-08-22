@@ -18,10 +18,9 @@ export type Profile = {
 };
 
 /**
- * The signed-in member together with their building.
- * Returns null when nobody is signed in, and 'no-profile' when the account
- * exists in Auth but was never attached to a building — which happens if the
- * join step failed midway through signup. That case is recoverable at /welcome.
+ * The signed-in member together with their building. Returns null when nobody
+ * is signed in, and 'no-profile' when the account exists in Auth but was never
+ * attached to a building. The second case is recoverable at /welcome.
  */
 export const getProfile = cache(
   async (): Promise<Profile | null | 'no-profile'> => {

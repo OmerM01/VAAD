@@ -61,9 +61,9 @@ export async function signOut(): Promise<void> {
 //  Sign up
 //
 //  Both flows create the Auth account first, then attach it to a building.
-//  If the second half fails — almost always a mistyped invite code — the account
-//  stays signed in without a profile and /welcome picks the flow back up, so a
-//  typo never costs the resident their email address.
+//  If the second step fails, usually a mistyped invite code, the account stays
+//  signed in without a profile and /welcome completes it. A typo therefore does
+//  not burn the email address.
 // -----------------------------------------------------------------------------
 
 export async function signUpAndJoin(
@@ -206,7 +206,7 @@ export async function completeCreateBuilding(
 //  Password reset
 // -----------------------------------------------------------------------------
 
-/** The origin this request arrived on, so the same code works locally and on Vercel. */
+/** Origin of the current request, so the same code works locally and on Vercel. */
 async function requestOrigin(): Promise<string> {
   const headerList = await headers();
   const host = headerList.get('x-forwarded-host') ?? headerList.get('host');
@@ -215,8 +215,8 @@ async function requestOrigin(): Promise<string> {
 }
 
 /**
- * Always reports success, whether or not the address is registered — otherwise
- * this form doubles as a way to discover who lives in the building.
+ * Always reports success, registered address or not. Otherwise the form can be
+ * used to find out who lives in the building.
  */
 export async function requestPasswordReset(
   _prev: ResetState,
@@ -232,7 +232,7 @@ export async function requestPasswordReset(
     redirectTo: `${await requestOrigin()}/auth/reset`,
   });
 
-  // A rate limit is worth reporting; anything else stays quiet on purpose.
+  // Rate limits are worth reporting. Everything else stays quiet by design.
   if (error && /rate|limit|seconds/i.test(error.message)) {
     return {
       error: 'נשלחו יותר מדי בקשות. נסה שוב בעוד כמה דקות.',

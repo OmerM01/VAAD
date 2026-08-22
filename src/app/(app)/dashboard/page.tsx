@@ -52,7 +52,7 @@ export default async function DashboardPage({
     getMembers(),
   ]);
 
-  // vaad only — the RPC raises FORBIDDEN for a dayar, so it is not even called
+  // Vaad only. The RPC raises FORBIDDEN for a dayar, so skip the call.
   let codes: InviteCodes | null = null;
   if (isVaad) {
     const { data } = await supabase.rpc('get_invite_codes');
@@ -89,7 +89,7 @@ export default async function DashboardPage({
         </p>
       </header>
 
-      {/* three numbers that say how the building is doing right now */}
+      {/* headline figures */}
       <div className="grid gap-4 sm:grid-cols-3">
         <StatTile
           href="/faults"
@@ -194,7 +194,7 @@ export default async function DashboardPage({
           )}
         </section>
 
-        {/* latest money movement */}
+        {/* recent transactions */}
         <section className="animate-rise">
           <SectionHead title="תנועות אחרונות בתקציב" href="/budget" linkLabel="לתקציב המלא" />
           {!transactions || transactions.length === 0 ? (

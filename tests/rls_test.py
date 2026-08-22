@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Security tests for the ועד בית schema.
+Security tests for the Vaad Bait schema.
 
 These do not go through the Next.js app at all — they hit the Supabase REST API
 directly with an ordinary member's token, which is exactly what a resident could

@@ -1,4 +1,4 @@
-/** The building mark — three stacked floors with a lit window. */
+/** Logo mark: a building with one lit window. */
 export function Logo({ className = 'h-8 w-8' }: { className?: string }) {
   return (
     <svg

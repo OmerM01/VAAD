@@ -1,4 +1,4 @@
-/** Proposal author line — a name, or the anonymous stand-in. */
+/** Proposal author: a name, or the anonymous placeholder. */
 export function Author({
   name,
   isMine,

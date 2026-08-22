@@ -24,8 +24,8 @@ export default async function ProposalPage({
   const { data } = await supabase.rpc('get_proposals', { p_id: id });
   const proposal = (data as ProposalView[] | null)?.[0];
 
-  // RLS scopes get_proposals() to the caller's building, so a proposal from
-  // another building is indistinguishable from one that does not exist.
+  // get_proposals() is scoped to the caller's building by RLS, so a proposal
+  // from another building looks the same as one that does not exist.
   if (!proposal) notFound();
 
   const { data: resultRows } = await supabase.rpc('get_proposal_results', {
@@ -36,7 +36,7 @@ export default async function ProposalPage({
 
   const isOpen = proposal.status === 'open';
   const result = outcome(proposal.votes_for, proposal.votes_against);
-  // whoever raised it — anonymously or not — plus any vaad member
+  // The member who raised it (anonymous or not), plus any vaad member.
   const canClose = isOpen && (proposal.is_mine || profile.role === 'vaad');
   const totalVotes = proposal.votes_for + proposal.votes_against;
 
@@ -104,7 +104,7 @@ export default async function ProposalPage({
         )}
       </section>
 
-      {/* voter roll — only ever populated once the vote has closed */}
+      {/* voter roll, populated only once the vote has closed */}
       {!isOpen && (
         <section className="card animate-rise p-6">
           <div className="flex flex-wrap items-baseline justify-between gap-2">

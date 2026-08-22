@@ -1,6 +1,6 @@
 /**
- * Shared shape for every `useActionState` form in the app.
- * Lives outside the "use server" modules, which may only export async functions.
+ * Shared shape for every useActionState form. Kept outside the "use server"
+ * modules, which may only export async functions.
  */
 export type ActionState = { error: string | null };
 

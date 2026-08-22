@@ -9,9 +9,9 @@ import { WelcomeForm } from './welcome-form';
 export const metadata = { title: 'השלמת הרשמה' };
 
 /**
- * Reached only by an account that exists in Auth but has no building — the
- * invite code was mistyped during signup, or the join failed midway. The email
- * and password are already saved, so only the building step is repeated here.
+ * For an account that exists in Auth but has no building, which happens when
+ * the invite code was mistyped during signup. The email and password are
+ * already stored, so only the building step is repeated here.
  */
 export default async function WelcomePage() {
   const profile = await getProfile();
