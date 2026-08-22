@@ -62,3 +62,16 @@ export function formatDateTime(iso: string): string {
 export function formatMoney(amount: number): string {
   return SHEKEL.format(amount);
 }
+
+const MONTH = new Intl.DateTimeFormat('he-IL', { month: 'long', year: 'numeric' });
+
+/** "אוגוסט 2026" from a YYYY-MM key. */
+export function formatMonth(yearMonth: string): string {
+  return MONTH.format(new Date(`${yearMonth}-01T00:00:00`));
+}
+
+const DAY = new Intl.DateTimeFormat('he-IL', { day: 'numeric', month: 'short' });
+
+export function formatDay(iso: string): string {
+  return DAY.format(new Date(`${iso}T00:00:00`));
+}

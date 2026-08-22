@@ -9,6 +9,7 @@ import { NavTabs, type NavItem } from './nav-tabs';
 const NAV: NavItem[] = [
   { href: '/dashboard', label: 'סקירה' },
   { href: '/faults', label: 'תקלות' },
+  { href: '/budget', label: 'תקציב' },
 ];
 
 function initials(name: string) {
