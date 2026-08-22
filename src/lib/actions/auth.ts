@@ -1,12 +1,13 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 
 import { createClient } from '@/lib/supabase/server';
 import { toHebrewError } from '@/lib/errors';
 
-import type { ActionState } from '@/lib/actions/state';
+import type { ActionState, ResetState } from '@/lib/actions/state';
 
 const MIN_PASSWORD = 8;
 
@@ -199,4 +200,75 @@ export async function completeCreateBuilding(
 
   revalidatePath('/', 'layout');
   redirect('/dashboard?created=1');
+}
+
+// -----------------------------------------------------------------------------
+//  Password reset
+// -----------------------------------------------------------------------------
+
+/** The origin this request arrived on, so the same code works locally and on Vercel. */
+async function requestOrigin(): Promise<string> {
+  const headerList = await headers();
+  const host = headerList.get('x-forwarded-host') ?? headerList.get('host');
+  const proto = headerList.get('x-forwarded-proto') ?? 'http';
+  return `${proto}://${host}`;
+}
+
+/**
+ * Always reports success, whether or not the address is registered — otherwise
+ * this form doubles as a way to discover who lives in the building.
+ */
+export async function requestPasswordReset(
+  _prev: ResetState,
+  form: FormData,
+): Promise<ResetState> {
+  const email = text(form, 'email');
+  if (!email || !email.includes('@')) {
+    return { error: 'צריך למלא כתובת אימייל תקינה.', sent: false };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${await requestOrigin()}/auth/reset`,
+  });
+
+  // A rate limit is worth reporting; anything else stays quiet on purpose.
+  if (error && /rate|limit|seconds/i.test(error.message)) {
+    return {
+      error: 'נשלחו יותר מדי בקשות. נסה שוב בעוד כמה דקות.',
+      sent: false,
+    };
+  }
+
+  return { error: null, sent: true };
+}
+
+export async function updatePassword(
+  _prev: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const password = String(form.get('password') ?? '');
+  const confirmation = String(form.get('password_confirm') ?? '');
+
+  if (password.length < MIN_PASSWORD) {
+    return { error: `הסיסמה צריכה להכיל לפחות ${MIN_PASSWORD} תווים.` };
+  }
+  if (password !== confirmation) return { error: 'שתי הסיסמאות אינן זהות.' };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      error: 'הקישור לאיפוס פג או כבר נוצל. בקש קישור חדש ונסה שוב.',
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { error: toHebrewError(error) };
+
+  revalidatePath('/', 'layout');
+  redirect('/dashboard');
 }

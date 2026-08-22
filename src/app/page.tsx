@@ -73,10 +73,10 @@ export default function HomePage() {
               className="animate-rise mt-9 flex flex-wrap items-center gap-3"
               style={{ animationDelay: '160ms' }}
             >
-              <Link href="/signup" className="btn btn-primary">
+              <Link href="/signup?mode=create" className="btn btn-primary">
                 יצירת בניין חדש
               </Link>
-              <Link href="/signup" className="btn btn-ghost">
+              <Link href="/signup?mode=join" className="btn btn-ghost">
                 יש לי קוד הצטרפות
               </Link>
             </div>

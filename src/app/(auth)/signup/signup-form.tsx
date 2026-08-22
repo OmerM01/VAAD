@@ -13,8 +13,8 @@ const TABS: { id: Mode; label: string; caption: string }[] = [
   { id: 'create', label: 'פותח בניין חדש', caption: 'יצירת בניין ושני קודים' },
 ];
 
-export function SignupForm() {
-  const [mode, setMode] = useState<Mode>('join');
+export function SignupForm({ initialMode = 'join' }: { initialMode?: Mode }) {
+  const [mode, setMode] = useState<Mode>(initialMode);
 
   return (
     <div>

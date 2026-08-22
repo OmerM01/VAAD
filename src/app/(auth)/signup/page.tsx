@@ -4,7 +4,8 @@ import { SignupForm } from './signup-form';
 
 export const metadata = { title: 'הרשמה' };
 
-export default function SignupPage() {
+export default async function SignupPage({ searchParams }: PageProps<'/signup'>) {
+  const { mode } = await searchParams;
   return (
     <div className="animate-rise">
       <div className="card p-8">
@@ -17,7 +18,7 @@ export default function SignupPage() {
           בהרשמה.
         </p>
 
-        <SignupForm />
+        <SignupForm initialMode={mode === 'create' ? 'create' : 'join'} />
       </div>
 
       <p className="mt-5 text-center text-sm text-ink-2">

@@ -42,6 +42,10 @@ npm run dev
 2. ב-**Authentication → Sign In / Providers → Email** לכבות את **Confirm email**.
    ההרשמה משייכת את המשתמש לבניין מיד אחרי יצירת החשבון, ולשם כך דרוש session
    פעיל בסיום ההרשמה.
+3. ב-**Authentication → URL Configuration** להגדיר את **Site URL** לכתובת
+   הפרודקשן, ולהוסיף ל-**Redirect URLs** גם את `http://localhost:3000/**`.
+   בלי זה הקישור במייל איפוס הסיסמה יחזור לכתובת ברירת המחדל במקום לאפליקציה —
+   Supabase לא מחזיר שגיאה על כתובת שאינה ברשימה, הוא פשוט מתעלם ממנה.
 
 ### פריסה ל-Vercel
 

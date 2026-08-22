@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useActionState } from 'react';
 
 import { signIn } from '@/lib/actions/auth';
@@ -25,7 +26,16 @@ export function LoginForm() {
         />
       </Field>
 
-      <Field label="סיסמה">
+      <div>
+        <div className="flex items-baseline justify-between gap-3">
+          <label className="field-label">סיסמה</label>
+          <Link
+            href="/forgot-password"
+            className="mb-1.5 text-xs font-semibold text-brand-600 underline-offset-4 hover:underline"
+          >
+            שכחתי סיסמה
+          </Link>
+        </div>
         <input
           name="password"
           type="password"
@@ -34,7 +44,7 @@ export function LoginForm() {
           className="input"
           placeholder="••••••••"
         />
-      </Field>
+      </div>
 
       <SubmitButton pendingLabel="מתחבר…">כניסה</SubmitButton>
     </form>
