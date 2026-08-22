@@ -113,6 +113,32 @@ create trigger faults_touch_updated_at
   before update on public.faults
   for each row execute function public.touch_updated_at();
 
+-- The foreign keys only cascade downwards: deleting a building removes its
+-- members, but removing the last member used to leave the building behind as an
+-- orphan — invisible to everyone, yet still holding two working invite codes.
+-- This puts the building away once nobody is left in it.
+--
+-- The `b.id = old.building_id` predicate is what makes this safe in the other
+-- direction too: when the building itself is being deleted, its members go via
+-- the FK cascade and this trigger fires for each of them, but by then the
+-- building row is no longer visible to the nested command, so the delete simply
+-- matches nothing instead of recursing.
+create or replace function public.drop_empty_building()
+returns trigger
+language plpgsql security definer set search_path = public
+as $fn$
+begin
+  delete from public.buildings b
+  where b.id = old.building_id
+    and not exists (select 1 from public.users u where u.building_id = b.id);
+  return null;
+end $fn$;
+
+drop trigger if exists users_drop_empty_building on public.users;
+create trigger users_drop_empty_building
+  after delete on public.users
+  for each row execute function public.drop_empty_building();
+
 -- =============================================================================
 --  Identity helpers
 --  SECURITY DEFINER so they can read public.users without re-triggering the RLS
