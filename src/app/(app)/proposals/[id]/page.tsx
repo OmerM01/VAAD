@@ -30,6 +30,14 @@ export default async function ProposalPage({
   const { data: resultRows } = await supabase.rpc('get_proposal_results', {
     p_proposal_id: id,
   });
+
+  // The votes policy allows reading only your own ballot, which is exactly what
+  // is needed to pre-tick the anonymity box when changing a vote.
+  const { data: ownVote } = await supabase
+    .from('votes')
+    .select('voter_anonymous')
+    .eq('proposal_id', id)
+    .maybeSingle();
   const results = (resultRows as ProposalResults[] | null)?.[0];
   const voters = results?.voters ?? [];
 
@@ -90,6 +98,7 @@ export default async function ProposalPage({
         votesFor={proposal.votes_for}
         votesAgainst={proposal.votes_against}
         myVote={proposal.my_vote}
+        myVoteAnonymous={ownVote?.voter_anonymous ?? false}
         canClose={canClose}
         closedLabel={OUTCOME_TEXT[result].label}
       />

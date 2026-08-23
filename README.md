@@ -96,6 +96,10 @@ buttons; the database is what refuses.
 - **Derived balance.** There is no stored balance column.
   `get_building_budget_summary()` sums the transactions on read, so the balance
   cannot drift out of sync with the ledger.
+- **One changeable ballot.** The unique index on `(proposal_id, user_id)` keeps
+  a member to a single row. `vote_on_proposal()` upserts onto it instead of
+  refusing a second call, so changing your mind replaces the earlier choice
+  rather than adding a vote. Once the proposal closes, nothing is accepted.
 - **Vote closing.** `proposal_effective_status()` derives a proposal's state from
   `closes_at` at read time, with no scheduled job. A proposal past its date is
   closed, and the voter roll opens at that moment. `close_proposal()` allows an
@@ -126,10 +130,10 @@ python tests/rls_test.py
 The tests do not go through the Next.js app. They call the Supabase REST API
 directly with an ordinary member's token, which is what a resident could do from
 the browser console, so what passes there holds regardless of what the interface
-shows. 89 checks covering role assignment by invite code, committee-only actions,
-isolation between buildings, proposer and voter anonymity, one ballot per member,
-transaction reversal, early vote closing, the notification feed, and zero access
-for a signed-out visitor.
+shows. 92 checks covering role assignment by invite code, committee-only actions,
+isolation between buildings, proposer and voter anonymity, one ballot per member
+that the member may change while the vote is open, transaction reversal, early
+vote closing, the notification feed, and zero access for a signed-out visitor.
 
 Each run creates its own throwaway accounts and prints the cleanup statement at
 the end.

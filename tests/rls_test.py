@@ -315,14 +315,25 @@ status, data = rpc(T_DAYAR, "vote_on_proposal",
                    {"p_proposal_id": NAMED, "p_vote": "for", "p_anonymous": False})
 check("the first ballot is accepted", status in (200, 204), f"{status} {data}")
 
+# a change of mind replaces the earlier choice instead of adding a vote
 status, data = rpc(T_DAYAR, "vote_on_proposal",
-                   {"p_proposal_id": NAMED, "p_vote": "against", "p_anonymous": False})
-check("a second ballot is refused", "ALREADY_VOTED" in json.dumps(data), f"{data}")
+                   {"p_proposal_id": NAMED, "p_vote": "against", "p_anonymous": True})
+check("a member may change their vote while it is open", status in (200, 204),
+      f"{status} {data}")
+
+rows = get(T_DAYAR, f"votes?proposal_id=eq.{NAMED}&select=vote,voter_anonymous")[1]
+check("the change replaced the ballot rather than adding one", len(rows) == 1, f"{rows}")
+check("...and it now records the new choice", rows[0]["vote"] == "against", f"{rows}")
+check("...along with the new anonymity setting", rows[0]["voter_anonymous"] is True,
+      f"{rows}")
+
+rpc(T_DAYAR, "vote_on_proposal",
+    {"p_proposal_id": NAMED, "p_vote": "for", "p_anonymous": False})
 
 status, data = insert(T_DAYAR, "votes",
                       {"proposal_id": NAMED, "user_id": U_DAYAR, "vote": "against"},
                       select="id")
-check("bypassing the RPC hits the unique constraint",
+check("a raw second insert still hits the unique constraint",
       status in (400, 409) and "23505" in json.dumps(data), f"{status} {data}")
 
 status, data = insert(T_DAYAR, "votes",
@@ -379,8 +390,8 @@ check("...but their vote is still counted", anon[0]["vote"] == "against", f"{ano
 
 status, data = rpc(T_VAAD, "vote_on_proposal",
                    {"p_proposal_id": CLOSING, "p_vote": "for", "p_anonymous": False})
-check("a late ballot is refused", "ALREADY_VOTED" in json.dumps(data)
-      or "PROPOSAL_CLOSED" in json.dumps(data), f"{data}")
+check("a ballot cannot be cast or changed after closing",
+      "PROPOSAL_CLOSED" in json.dumps(data), f"{data}")
 
 
 # ---------------------------------------------------------------------------

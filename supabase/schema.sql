@@ -501,7 +501,10 @@ begin
         where v.proposal_id = v_p.id), '[]'::jsonb) end;
 end $fn$;
 
--- One ballot per member, checked before insert and backed by a unique constraint.
+-- One ballot per member, which they may change while the vote is still open.
+-- The unique constraint keeps it to a single row per member; this upserts onto
+-- it rather than refusing, so a change of mind replaces the earlier choice
+-- instead of adding a second vote. created_at keeps the first cast.
 create or replace function public.vote_on_proposal(
   p_proposal_id uuid,
   p_vote        public.vote_choice,
@@ -524,12 +527,11 @@ begin
     raise exception 'PROPOSAL_CLOSED';
   end if;
 
-  if exists (select 1 from public.votes where proposal_id = p_proposal_id and user_id = v_uid) then
-    raise exception 'ALREADY_VOTED';
-  end if;
-
   insert into public.votes (proposal_id, user_id, vote, voter_anonymous)
-  values (p_proposal_id, v_uid, p_vote, coalesce(p_anonymous, false));
+  values (p_proposal_id, v_uid, p_vote, coalesce(p_anonymous, false))
+  on conflict (proposal_id, user_id) do update
+    set vote            = excluded.vote,
+        voter_anonymous = excluded.voter_anonymous;
 end $fn$;
 
 -- Corrects a mistaken entry by recording its mirror image instead of editing or
