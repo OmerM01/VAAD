@@ -16,6 +16,7 @@ const NAV: NavItem[] = [
   { href: '/faults', label: 'תקלות' },
   { href: '/budget', label: 'תקציב' },
   { href: '/proposals', label: 'הצעות' },
+  { href: '/board', label: 'לוח שכנים' },
 ];
 
 function initials(name: string) {

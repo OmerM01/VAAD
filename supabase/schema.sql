@@ -669,6 +669,17 @@ begin
      where p.building_id = v_bid and p.created_by <> v_uid
 
     union all
+    -- someone else put a notice on the board
+    select 'post_new', n.id, n.title,
+           'מודעה חדשה בלוח השכנים מאת ' || u.full_name,
+           n.created_at
+      from public.neighbour_posts n
+      join public.users u on u.id = n.created_by
+     where n.building_id = v_bid
+       and n.created_by <> v_uid
+       and public.post_effective_status(n.status, n.expires_at) = 'active'
+
+    union all
     -- voting ended
     select 'proposal_closed', p.id, p.title,
            'ההצבעה על ההצעה נסגרה',
@@ -691,6 +702,106 @@ language sql volatile security definer set search_path = public
 as $fn$
   update public.users set notifications_seen_at = now() where id = auth.uid();
 $fn$;
+
+
+-- =============================================================================
+--  Neighbours' board
+--
+--  Residents offering and asking each other for things: babysitting, walking a
+--  dog, a shared produce order, lending a drill. Nothing here is anonymous —
+--  the whole point is that a neighbour can tell who to knock on — so created_by
+--  stays readable, unlike on proposals.
+-- =============================================================================
+
+do $$ begin create type public.post_kind as enum ('offer','request','group_buy','lending','other'); exception when duplicate_object then null; end $$;
+do $$ begin create type public.post_status as enum ('active','closed'); exception when duplicate_object then null; end $$;
+
+create table if not exists public.neighbour_posts (
+  id          uuid primary key default gen_random_uuid(),
+  building_id uuid not null references public.buildings (id) on delete cascade,
+  created_by  uuid not null references public.users (id) on delete cascade,
+  kind        public.post_kind not null default 'offer',
+  title       text not null check (length(btrim(title)) between 3 and 120),
+  description text check (description is null or length(description) <= 2000),
+  price_note  text check (price_note is null or length(btrim(price_note)) <= 60),
+  contact     text check (contact is null or length(btrim(contact)) <= 80),
+  expires_at  timestamptz,
+  status      public.post_status not null default 'active',
+  created_at  timestamptz not null default now()
+);
+create index if not exists posts_building_idx
+  on public.neighbour_posts (building_id, created_at desc);
+
+-- who put their hand up. A shared order only works if everyone can see the count
+-- and the poster can see the names.
+create table if not exists public.post_interests (
+  id         uuid primary key default gen_random_uuid(),
+  post_id    uuid not null references public.neighbour_posts (id) on delete cascade,
+  user_id    uuid not null references public.users (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  constraint post_interest_once unique (post_id, user_id)
+);
+create index if not exists post_interests_idx on public.post_interests (post_id);
+
+alter table public.neighbour_posts enable row level security;
+alter table public.post_interests  enable row level security;
+
+drop policy if exists posts_select_building on public.neighbour_posts;
+create policy posts_select_building on public.neighbour_posts
+  for select to authenticated
+  using (building_id = public.my_building_id());
+
+drop policy if exists posts_insert_member on public.neighbour_posts;
+create policy posts_insert_member on public.neighbour_posts
+  for insert to authenticated
+  with check (building_id = public.my_building_id() and created_by = auth.uid());
+
+-- the author takes their own notice down; a vaad member can take any of them
+-- down, which is what makes the board moderatable
+drop policy if exists posts_update_author_or_vaad on public.neighbour_posts;
+create policy posts_update_author_or_vaad on public.neighbour_posts
+  for update to authenticated
+  using (building_id = public.my_building_id()
+         and (created_by = auth.uid() or public.is_vaad()))
+  with check (building_id = public.my_building_id()
+              and (created_by = auth.uid() or public.is_vaad()));
+
+drop policy if exists interests_select_building on public.post_interests;
+create policy interests_select_building on public.post_interests
+  for select to authenticated
+  using (exists (select 1 from public.neighbour_posts n
+                  where n.id = post_id and n.building_id = public.my_building_id()));
+
+drop policy if exists interests_insert_own on public.post_interests;
+create policy interests_insert_own on public.post_interests
+  for insert to authenticated
+  with check (user_id = auth.uid()
+              and exists (select 1 from public.neighbour_posts n
+                           where n.id = post_id and n.building_id = public.my_building_id()));
+
+drop policy if exists interests_delete_own on public.post_interests;
+create policy interests_delete_own on public.post_interests
+  for delete to authenticated
+  using (user_id = auth.uid());
+
+revoke all on public.neighbour_posts, public.post_interests from anon, authenticated;
+grant select, insert on public.neighbour_posts to authenticated;
+grant update (status) on public.neighbour_posts to authenticated;
+grant select, insert, delete on public.post_interests to authenticated;
+
+-- A notice is over once it is taken down or its date has passed, worked out on
+-- read exactly as a proposal's state is.
+create or replace function public.post_effective_status(
+  p_status public.post_status, p_expires_at timestamptz)
+returns public.post_status
+language sql stable
+as $fn$ select case when p_status = 'closed'
+                      or (p_expires_at is not null and p_expires_at <= now())
+                    then 'closed'::public.post_status
+                    else 'active'::public.post_status end $fn$;
+
+grant execute on function public.post_effective_status(public.post_status, timestamptz)
+  to authenticated;
 
 -- =============================================================================
 --  Function grants

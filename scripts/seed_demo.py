@@ -377,6 +377,65 @@ for spec in PROPOSALS:
     tally = f"{sum(1 for v in spec['votes'] if v[1] == 'for')}-{sum(1 for v in spec['votes'] if v[1] == 'against')}"
     print(f"  {tally:5s} {'anon ' if spec['anon'] else '     '} {spec['title']}")
 
+# ---------------------------------------------------------------------------
+#  Neighbours' board
+# ---------------------------------------------------------------------------
+
+POSTS = [
+    ("neta", "offer", "בייביסיטר בערבים, ימים א׳–ה׳",
+     "סטודנטית לחינוך, גרה בדירה 6. יש לי ניסיון עם גילאי שנתיים ומעלה, ואפשר גם בהתראה קצרה.",
+     "45 ש״ח לשעה", "ווטסאפ 052-555-1234", 30, 9, ["dayar", "avi"]),
+    ("omer", "offer", "הוצאת כלבים בבוקר",
+     "יוצא כל בוקר ב-6:45 עם הכלב שלי, ושמח לצרף עוד אחד. מתאים גם למי שנוסע לכמה ימים.",
+     "20 ש״ח להליכה", "דירה 9, או 054-555-8890", 30, 6, ["ronit"]),
+    ("ronit", "group_buy", "ארגז ירקות מחקלאי — הזמנה משותפת ליום חמישי",
+     "מזמינה כל שבועיים ישירות מחקלאי בשרון. ארגז מעורב של כ-8 ק״ג, מגיע ביום חמישי אחר הצהריים לכניסה. צריך שישה מזמינים כדי שהמשלוח ישתלם.",
+     "כ-90 ש״ח לארגז", "ווטסאפ 053-555-2211", 14, 3, ["vaad", "neta", "avi", "dayar"]),
+    ("yael", "request", "מחפשת מישהו שישקה עציצים בשבוע הבא",
+     "נוסעת מה-2 עד ה-9. שלושה עציצים במרפסת, השקיה פעם ביומיים. אשמח להחזיר טובה.",
+     None, "דירה 1", 14, 2, ["omer"]),
+    ("avi", "lending", "מקדחה, מברגה וסולם להשאלה",
+     "יש לי מקדחת רוטרי, מברגה נטענת וסולם ארבעה שלבים. מי שצריך פשוט שידפוק בדלת.",
+     "חינם", "דירה 4", 90, 12, []),
+    ("ronit", "other", "שיעורים פרטיים באנגלית לתלמידי תיכון",
+     "הבת שלי, סטודנטית לבלשנות, נותנת שיעורים פרטיים. אפשר גם אצלנו בדירה.",
+     "80 ש״ח לשיעור", "דרך רונית, דירה 12", 60, 4, ["neta"]),
+    ("dayar", "group_buy", "הזמנה משותפת מאיקאה — משלוח אחד לבניין",
+     "חסכנו יחד את דמי המשלוח. ההזמנה נסגרה והגיעה.",
+     "לפי חלוקה", None, -3, 26, ["vaad", "yael", "omer"]),
+]
+
+print("\nboard")
+for who, kind, title, desc, price, contact, expires_in, created, joiners in POSTS:
+    status_code, data = insert(
+        tokens[who],
+        "neighbour_posts",
+        {
+            "building_id": BUILDING,
+            "created_by": USERS[who],
+            "kind": kind,
+            "title": title,
+            "description": desc,
+            "price_note": price,
+            "contact": contact,
+            "expires_at": ahead(expires_in) if expires_in > 0 else ago(-expires_in),
+            "created_at": ago(created),
+        },
+        select="id",
+    )
+    if status_code != 201:
+        print("  FAILED", title, status_code, data)
+        continue
+    for joiner in joiners:
+        insert(
+            tokens[joiner],
+            "post_interests",
+            {"post_id": data[0]["id"], "user_id": USERS[joiner]},
+            select="id",
+        )
+    state = "expired" if expires_in <= 0 else "active "
+    print(f"  {state} {len(joiners)} interested  {title}")
+
 print("\ndone.")
 print(f"  vaad   {VAAD_EMAIL}")
 print(f"  dayar  {DAYAR_EMAIL}")
@@ -386,4 +445,7 @@ print(f"""  delete from public.votes v using public.proposals p
    where v.proposal_id = p.id and p.building_id = '{BUILDING}';
   delete from public.proposals where building_id = '{BUILDING}';
   delete from public.budget_transactions where building_id = '{BUILDING}';
-  delete from public.faults where building_id = '{BUILDING}';""")
+  delete from public.faults where building_id = '{BUILDING}';
+  delete from public.post_interests i using public.neighbour_posts n
+   where i.post_id = n.id and n.building_id = '{BUILDING}';
+  delete from public.neighbour_posts where building_id = '{BUILDING}';""")

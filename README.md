@@ -2,7 +2,8 @@
 
 A web app for running a residential building committee: fault reports with a
 visible status, a budget every resident can see, and proposals the building can
-vote on. It supports many buildings at once. Each building keeps its own
+vote on, plus a board where they offer each other babysitting, dog walking, a
+shared produce order or a drill to borrow. It supports many buildings at once. Each building keeps its own
 residents, faults and budget, and there is no path by which a resident of one
 building can reach another building's data.
 
@@ -136,6 +137,11 @@ buttons; the database is what refuses.
   nothing to backfill, so the feed cannot contradict the data. It skips actions
   the reader performed, and an anonymous proposal is announced without a name.
   The `users.notifications_seen_at` watermark is not writable from the client.
+- **The board is deliberately not anonymous.** `neighbour_posts.created_by` is
+  readable, the opposite of `proposals.created_by`. A neighbour has to know
+  whose door to knock on, so the same permission machinery is pointed the other
+  way here on purpose. A notice can be taken down by its author or by any
+  committee member, which is what keeps the board moderatable.
 - **Orphan buildings.** Foreign keys only cascade downwards, so removing the last
   member used to leave a building behind: invisible, but still holding two valid
   invite codes. A trigger on member deletion drops a building once nobody is left
@@ -150,10 +156,11 @@ python tests/rls_test.py
 The tests do not go through the Next.js app. They call the Supabase REST API
 directly with an ordinary member's token, which is what a resident could do from
 the browser console, so what passes there holds regardless of what the interface
-shows. 92 checks covering role assignment by invite code, committee-only actions,
+shows. 109 checks covering role assignment by invite code, committee-only actions,
 isolation between buildings, proposer and voter anonymity, one ballot per member
 that the member may change while the vote is open, transaction reversal, early
-vote closing, the notification feed, and zero access for a signed-out visitor.
+vote closing, the notification feed, the neighbours' board and its moderation
+rules, and zero access for a signed-out visitor.
 
 Each run creates its own throwaway accounts and prints the cleanup statement at
 the end.
@@ -169,6 +176,7 @@ src/
       faults/          fault reports
       budget/          ledger
       proposals/       proposals and voting
+      board/           the neighbours' board
     auth/reset/        password-reset callback
     welcome/           completes a signup that stopped before joining a building
   components/          shared UI

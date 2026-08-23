@@ -29,6 +29,10 @@ const ICONS: Record<NotificationKind, { path: string; tone: string }> = {
     path: 'M5.5 9.5h9v6h-9v-6Zm2 0V7.75a2.5 2.5 0 0 1 5 0V9.5',
     tone: 'bg-paper-deep text-ink-2',
   },
+  post_new: {
+    path: 'M4 5.5h12v9H4v-9Zm2.5 2.5h4m-4 3h7',
+    tone: 'bg-clay-50 text-clay-500',
+  },
 };
 
 function hrefFor(item: AppNotification): Route {
@@ -39,6 +43,8 @@ function hrefFor(item: AppNotification): Route {
     case 'proposal_new':
     case 'proposal_closed':
       return `/proposals/${item.entity_id}` as Route;
+    case 'post_new':
+      return '/board';
     default:
       return '/budget';
   }

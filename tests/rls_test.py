@@ -566,9 +566,97 @@ check("a resident cannot move the watermark by hand",
 
 # ---------------------------------------------------------------------------
 
+section("the neighbours' board is open within the building, closed outside it")
+
+status, data = insert(T_DAYAR, "neighbour_posts", {
+    "building_id": BUILDING, "created_by": U_DAYAR,
+    "kind": "group_buy",
+    "title": "ארגז ירקות מחקלאי — הזמנה משותפת",
+    "description": "צריך שישה מזמינים כדי שהמשלוח ישתלם.",
+    "price_note": "כ-90 ש״ח לארגז",
+    "contact": "דירה 7",
+    "expires_at": future(days=14),
+}, select="id")
+check("a resident can put a notice up", status == 201, f"{status} {data}")
+POST = data[0]["id"] if status == 201 else None
+
+# unlike a proposal, the author is meant to be visible: a neighbour has to know
+# whose door to knock on
+status, data = get(T_VAAD, f"neighbour_posts?id=eq.{POST}&select=created_by,title")
+check("the author is readable, by design", data and data[0]["created_by"] == U_DAYAR,
+      f"{status} {data}")
+
+status, data = insert(T_VAAD, "post_interests",
+                      {"post_id": POST, "user_id": U_VAAD}, select="id")
+check("another member can put their hand up", status == 201, f"{status} {data}")
+
+status, data = insert(T_VAAD, "post_interests",
+                      {"post_id": POST, "user_id": U_VAAD}, select="id")
+check("the same member cannot register twice",
+      status in (400, 409) and "23505" in json.dumps(data), f"{status} {data}")
+
+status, data = insert(T_VAAD, "post_interests",
+                      {"post_id": POST, "user_id": U_DAYAR}, select="id")
+check("nobody can register on another member's behalf", denied(status, data),
+      f"{status} {data}")
+
+status, data = get(T_DAYAR, f"post_interests?post_id=eq.{POST}&select=user_id")
+check("the poster sees who registered", len(data) == 1 and data[0]["user_id"] == U_VAAD,
+      f"{data}")
+
+print()
+print("=== taking a notice down ===")
+
+status, data = insert(T_VAAD, "neighbour_posts", {
+    "building_id": BUILDING, "created_by": U_VAAD,
+    "kind": "offer", "title": "מקדחה להשאלה", "expires_at": future(days=30),
+}, select="id")
+VAAD_POST = data[0]["id"]
+
+status, data = patch(T_DAYAR, f"neighbour_posts?id=eq.{VAAD_POST}", {"status": "closed"})
+check("a resident cannot remove someone else's notice", denied(status, data),
+      f"{status} {data}")
+
+status, data = patch(T_DAYAR, f"neighbour_posts?id=eq.{POST}", {"status": "closed"})
+check("the author can remove their own", status == 200 and data, f"{status} {data}")
+
+status, data = patch(T_VAAD, f"neighbour_posts?id=eq.{VAAD_POST}", {"status": "closed"})
+check("a vaad member can remove any notice", status == 200 and data, f"{status} {data}")
+
+status, data = patch(T_VAAD, f"neighbour_posts?id=eq.{VAAD_POST}", {"title": "כותרת אחרת"})
+check("the text itself cannot be rewritten", status in (401, 403), f"{status} {data}")
+
+print()
+print("=== the board is scoped to one building ===")
+
+check("building B sees no notices",
+      get(T_OTHER, "neighbour_posts?select=id")[1] == [])
+check("building B sees no registrations",
+      get(T_OTHER, "post_interests?select=id")[1] == [])
+
+status, data = patch(T_OTHER, f"neighbour_posts?id=eq.{POST}", {"status": "active"})
+check("building B cannot touch building A's notice", denied(status, data),
+      f"{status} {data}")
+
+status, data = insert(T_OTHER, "neighbour_posts", {
+    "building_id": BUILDING, "created_by": U_OTHER,
+    "kind": "other", "title": "החדרה ללוח של בניין אחר",
+}, select="id")
+check("building B cannot plant a notice in building A", denied(status, data),
+      f"{status} {data}")
+
+status, data = insert(T_OTHER, "post_interests",
+                      {"post_id": POST, "user_id": U_OTHER}, select="id")
+check("building B cannot register on building A's notice", denied(status, data),
+      f"{status} {data}")
+
+
+# ---------------------------------------------------------------------------
+
 section("an anonymous visitor gets nothing at all")
 
-for table in ["buildings", "users", "faults", "budget_transactions", "proposals", "votes"]:
+for table in ["buildings", "users", "faults", "budget_transactions", "proposals",
+              "votes", "neighbour_posts", "post_interests"]:
     status, _ = call("GET", f"/rest/v1/{table}?select=id&limit=1")
     check(f"anon is refused on {table}", status in (401, 403))
 

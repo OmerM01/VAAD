@@ -16,6 +16,8 @@ export type FaultCategory =
 export type TransactionType = 'income' | 'expense';
 export type ProposalStatus = 'open' | 'closed';
 export type VoteChoice = 'for' | 'against';
+export type PostKind = 'offer' | 'request' | 'group_buy' | 'lending' | 'other';
+export type PostStatus = 'active' | 'closed';
 
 export type Building = {
   id: string;
@@ -117,12 +119,34 @@ export type BudgetSummary = {
   tx_count: number;
 };
 
+export type NeighbourPost = {
+  id: string;
+  building_id: string;
+  created_by: string;
+  kind: PostKind;
+  title: string;
+  description: string | null;
+  price_note: string | null;
+  contact: string | null;
+  expires_at: string | null;
+  status: PostStatus;
+  created_at: string;
+};
+
+export type PostInterest = {
+  id: string;
+  post_id: string;
+  user_id: string;
+  created_at: string;
+};
+
 export type NotificationKind =
   | 'fault_new'
   | 'fault_status'
   | 'transaction'
   | 'proposal_new'
-  | 'proposal_closed';
+  | 'proposal_closed'
+  | 'post_new';
 
 export type AppNotification = {
   kind: NotificationKind;
@@ -187,6 +211,22 @@ export type Database = {
           }
         >;
         Update: Update<Proposal>;
+        Relationships: [];
+      };
+      neighbour_posts: {
+        Row: Row<NeighbourPost>;
+        Insert: Insert<
+          Omit<NeighbourPost, 'id' | 'created_at' | 'status'> & {
+            status?: PostStatus;
+          }
+        >;
+        Update: Update<Pick<NeighbourPost, 'status'>>;
+        Relationships: [];
+      };
+      post_interests: {
+        Row: Row<PostInterest>;
+        Insert: Insert<Omit<PostInterest, 'id' | 'created_at'>>;
+        Update: Update<PostInterest>;
         Relationships: [];
       };
       votes: {
@@ -270,6 +310,8 @@ export type Database = {
       transaction_type: TransactionType;
       proposal_status: ProposalStatus;
       vote_choice: VoteChoice;
+      post_kind: PostKind;
+      post_status: PostStatus;
     };
     CompositeTypes: Record<never, never>;
   };
