@@ -4,6 +4,9 @@ import { signOut } from '@/lib/actions/auth';
 import type { Profile } from '@/lib/auth';
 import { Logo } from '@/components/brand';
 import { NotificationBell } from '@/components/notification-bell';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { ToastProvider } from '@/components/toast';
+import { PageTransition } from '@/components/page-transition';
 import type { AppNotification } from '@/lib/database.types';
 
 import { NavTabs, type NavItem } from './nav-tabs';
@@ -35,12 +38,13 @@ export function AppShell({
   const isVaad = profile.role === 'vaad';
 
   return (
+    <ToastProvider>
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-4 px-5">
           <Link href="/dashboard" className="flex shrink-0 items-center gap-2.5">
             <Logo className="h-7 w-7" />
-            <span className="hidden font-display text-lg font-bold text-brand-800 sm:block">
+            <span className="hidden font-display text-lg font-bold text-heading sm:block">
               ועד בית
             </span>
           </Link>
@@ -60,12 +64,13 @@ export function AppShell({
 
           <div className="flex shrink-0 items-center gap-3">
             <NotificationBell items={notifications} />
+            <ThemeToggle />
 
             <div className="hidden items-center gap-2.5 sm:flex">
               <span
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
                   isVaad
-                    ? 'bg-brand-600 text-white'
+                    ? 'bg-cta text-cta-ink'
                     : 'bg-brand-50 text-brand-700'
                 }`}
                 aria-hidden="true"
@@ -94,7 +99,10 @@ export function AppShell({
         <NavTabs items={NAV} />
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-8">{children}</main>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-5 py-8">
+        <PageTransition>{children}</PageTransition>
+      </main>
     </div>
+    </ToastProvider>
   );
 }

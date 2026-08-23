@@ -10,7 +10,7 @@ export default async function SignupPage({ searchParams }: PageProps<'/signup'>)
     <div className="animate-rise">
       <div className="card p-8">
         <span className="eyebrow">הרשמה</span>
-        <h1 className="mt-1.5 font-display text-2xl font-bold text-brand-900">
+        <h1 className="mt-1.5 font-display text-2xl font-bold text-heading">
           פתיחת חשבון
         </h1>
         <p className="mt-2 mb-7 text-sm text-ink-2">

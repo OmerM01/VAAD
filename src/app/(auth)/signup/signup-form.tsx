@@ -40,7 +40,7 @@ export function SignupForm({ initialMode = 'join' }: { initialMode?: Mode }) {
             aria-selected={mode === tab.id}
             onClick={() => setMode(tab.id)}
             className={`relative z-10 rounded-lg px-3 py-2 text-center transition-colors duration-200 ${
-              mode === tab.id ? 'text-brand-800' : 'text-ink-3 hover:text-ink-2'
+              mode === tab.id ? 'text-heading' : 'text-ink-3 hover:text-ink-2'
             }`}
           >
             <span className="block text-sm font-semibold">{tab.label}</span>

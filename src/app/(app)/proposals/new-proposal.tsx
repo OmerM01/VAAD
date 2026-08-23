@@ -24,7 +24,7 @@ export function NewProposal() {
     <section className="card animate-rise w-full p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-bold text-brand-900">
+          <h2 className="font-display text-lg font-bold text-heading">
             הצעה חדשה להצבעה
           </h2>
           <p className="mt-0.5 text-sm text-ink-2">

@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireProfile } from '@/lib/auth';
 import { toHebrewError } from '@/lib/errors';
-import type { ActionState } from '@/lib/actions/state';
+import { done, type ActionState } from '@/lib/actions/state';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -60,7 +60,7 @@ export async function createTransaction(
 
   revalidatePath('/budget');
   revalidatePath('/dashboard');
-  return { error: null };
+  return done(_prev, 'התנועה נרשמה');
 }
 
 /**
@@ -86,5 +86,5 @@ export async function reverseTransaction(
 
   revalidatePath('/budget');
   revalidatePath('/dashboard');
-  return { error: null };
+  return done(_prev, 'התנועה בוטלה ונרשם תיקון נגדי');
 }

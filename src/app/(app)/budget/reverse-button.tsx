@@ -5,6 +5,7 @@ import { useFormStatus } from 'react-dom';
 
 import { reverseTransaction } from '@/lib/actions/budget';
 import { IDLE } from '@/lib/actions/state';
+import { useActionToast } from '@/components/toast';
 import { Spinner } from '@/components/ui/form';
 
 export function ReverseButton({
@@ -16,6 +17,7 @@ export function ReverseButton({
 }) {
   const [confirming, setConfirming] = useState(false);
   const [state, action] = useActionState(reverseTransaction, IDLE);
+  useActionToast(state);
 
   if (!confirming) {
     return (

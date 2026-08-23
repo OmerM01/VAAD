@@ -4,6 +4,8 @@ import { getMembers } from '@/lib/members';
 import { formatDay, formatMoney, formatMonth } from '@/lib/format';
 import type { BudgetSummary, BudgetTransaction } from '@/lib/database.types';
 
+import { Counter } from '@/components/counter';
+
 import { AddTransaction } from './add-transaction';
 import { ReverseButton } from './reverse-button';
 
@@ -45,7 +47,7 @@ export default async function BudgetPage() {
       <div className="animate-rise flex flex-wrap items-end justify-between gap-4">
         <div>
           <span className="eyebrow">כספי הבניין</span>
-          <h1 className="mt-1 font-display text-3xl font-bold text-brand-900">
+          <h1 className="mt-1 font-display text-3xl font-bold text-heading">
             תקציב
           </h1>
           <p className="mt-1.5 text-sm text-ink-2">
@@ -74,7 +76,7 @@ export default async function BudgetPage() {
                 style={{ animationDelay: `${Math.min(groupIndex, 6) * 60}ms` }}
               >
                 <div className="mb-2 flex items-baseline justify-between gap-3 px-1">
-                  <h2 className="font-display text-base font-bold text-brand-900">
+                  <h2 className="font-display text-base font-bold text-heading">
                     {formatMonth(month)}
                   </h2>
                   <span
@@ -187,10 +189,10 @@ function BalanceCard({
           <span className="eyebrow">יתרה נוכחית</span>
           <p
             className={`num mt-1.5 font-display text-4xl font-bold ${
-              balance >= 0 ? 'text-brand-900' : 'text-danger-500'
+              balance >= 0 ? 'text-heading' : 'text-danger-500'
             }`}
           >
-            {formatMoney(balance)}
+            <Counter value={balance} format="money" duration={1100} />
           </p>
           <p className="num mt-1 text-xs text-ink-3">
             מחושב מ-{count} תנועות רשומות
@@ -231,7 +233,7 @@ function Stat({
           tone === 'ok' ? 'text-ok-500' : 'text-danger-500'
         }`}
       >
-        {formatMoney(value)}
+        <Counter value={value} format="money" />
       </p>
     </div>
   );
@@ -245,7 +247,7 @@ function EmptyState({ isVaad }: { isVaad: boolean }) {
         <circle cx="24" cy="25" r="5" />
         <path d="M13 20v10M35 20v10" strokeLinecap="round" />
       </svg>
-      <p className="mt-4 font-display text-lg font-bold text-brand-900">
+      <p className="mt-4 font-display text-lg font-bold text-heading">
         עדיין אין תנועות בתקציב
       </p>
       <p className="mt-1 max-w-sm text-sm leading-relaxed text-ink-2">

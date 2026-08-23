@@ -21,6 +21,13 @@
   --color-ink-2: #4c5967;
   --color-ink-3: #7e8a97;
 
+  /* semantic roles that flip between themes rather than following the ramps */
+  --color-heading: #0d1c2b;   /* display type */
+  --color-chip: #f3f0ea;      /* neutral badge fill */
+  --color-cta: #1d3f60;       /* filled primary button and active chip */
+  --color-cta-ink: #ffffff;
+  --color-accent-solid: #c96140;
+
   /* brand — deep architectural blue */
   --color-brand-50: #eef3f8;
   --color-brand-100: #d6e3ef;
@@ -66,6 +73,72 @@
   --animate-slide-in: slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* --------------------------------------------------------------------------
+   Dark theme
+
+   The boot script in the root layout always resolves the theme to an explicit
+   data-theme attribute, including when the visitor is on "system". That keeps
+   this to a single block instead of duplicating every value under a media
+   query as well.
+   -------------------------------------------------------------------------- */
+
+:root[data-theme='dark'] {
+  --color-paper: #10151b;
+  --color-paper-deep: #0b0f14;
+  --color-surface: #171d24;
+  --color-surface-2: #1e252d;
+  --color-line: #2a333c;
+  --color-line-strong: #3b4650;
+  --color-ink: #e9edf1;
+  --color-ink-2: #aab6c2;
+  --color-ink-3: #7b8794;
+
+  --color-heading: #f0f4f8;
+  --color-chip: #242c35;
+  --color-cta: #2f6ea3;
+  --color-cta-ink: #ffffff;
+  --color-accent-solid: #b85a34;
+
+  /* the ramps invert: the low steps become dark tints, the high steps become
+     readable text on top of them */
+  --color-brand-50: #16283a;
+  --color-brand-100: #1f3a52;
+  --color-brand-200: #2b4d6b;
+  --color-brand-300: #3e6a8f;
+  --color-brand-400: #5b8ab0;
+  --color-brand-500: #7ba7c9;
+  --color-brand-600: #97c0dd;
+  --color-brand-700: #b3d2e8;
+  --color-brand-800: #cfe2f0;
+  --color-brand-900: #e6f0f8;
+
+  --color-clay-50: #2b1a12;
+  --color-clay-100: #3d2519;
+  --color-clay-200: #5c3826;
+  --color-clay-300: #d99a7a;
+  --color-clay-400: #cf7a52;
+  --color-clay-500: #e08e63;
+  --color-clay-600: #eeae87;
+
+  --color-ok-50: #12271c;
+  --color-ok-100: #1c3b2a;
+  --color-ok-500: #4fb383;
+  --color-ok-600: #7fd0a8;
+  --color-warn-50: #2a2210;
+  --color-warn-100: #3d3218;
+  --color-warn-500: #d9ae4a;
+  --color-warn-600: #ecc871;
+  --color-danger-50: #2c1512;
+  --color-danger-100: #40201b;
+  --color-danger-500: #e0705c;
+  --color-danger-600: #f0937f;
+
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px -6px rgb(0 0 0 / 0.45);
+  --shadow-lift: 0 2px 4px rgb(0 0 0 / 0.35), 0 12px 32px -10px rgb(0 0 0 / 0.6);
+
+  color-scheme: dark;
+}
+
 @keyframes rise {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: none; }
@@ -77,6 +150,27 @@
 @keyframes slide-in {
   from { opacity: 0; transform: translateX(12px); }
   to   { opacity: 1; transform: none; }
+}
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(6px) scale(0.98); }
+}
+@keyframes reveal-bar {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+@keyframes pop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
 }
 @keyframes grow-bar {
   from { transform: scaleX(0); }
@@ -98,6 +192,7 @@ html {
 
 body {
   background-color: var(--color-paper);
+  transition: background-color 0.25s ease, color 0.25s ease;
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-feature-settings: "kern", "liga";
@@ -110,6 +205,7 @@ body {
 }
 
 h1, h2, h3 {
+  color: var(--color-heading);
   font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -122,14 +218,57 @@ h1, h2, h3 {
 }
 
 ::selection {
-  background: var(--color-brand-100);
-  color: var(--color-brand-800);
+  background: var(--color-brand-200);
+  color: var(--color-heading);
 }
 
 /* thin, unobtrusive scrollbars */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-line-strong) transparent;
+}
+
+/* --------------------------------------------------------------------------
+   View transitions
+   -------------------------------------------------------------------------- */
+
+/* a title travelling from a list card to the detail heading */
+::view-transition-group(.morph) {
+  animation-duration: 380ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+::view-transition-image-pair(.morph) {
+  animation-name: vt-blur;
+}
+@keyframes vt-blur {
+  30% { filter: blur(2px); }
+}
+
+/* the rest of the page hands over: the old view leaves quickly, the new one
+   fades in just after and keeps sliding for a beat longer */
+::view-transition-old(.page-exit) {
+  animation: 140ms ease-out both vt-fade reverse;
+}
+::view-transition-new(.page-enter) {
+  animation:
+    220ms ease-in 110ms both vt-fade,
+    380ms cubic-bezier(0.16, 1, 0.3, 1) both vt-rise;
+}
+@keyframes vt-fade {
+  from { opacity: 0; filter: blur(3px); }
+  to   { opacity: 1; filter: blur(0); }
+}
+@keyframes vt-rise {
+  from { transform: translateY(10px); }
+  to   { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -178,18 +317,22 @@ h1, h2, h3 {
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .btn-primary {
-    background-color: var(--color-brand-600);
-    color: #fff;
-    box-shadow: 0 1px 2px rgb(13 28 43 / 0.25);
+    background-color: var(--color-cta);
+    color: var(--color-cta-ink);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
   }
-  .btn-primary:hover:not(:disabled) { background-color: var(--color-brand-700); }
+  .btn-primary:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-cta) 88%, black);
+  }
 
   .btn-accent {
-    background-color: var(--color-clay-400);
+    background-color: var(--color-accent-solid);
     color: #fff;
-    box-shadow: 0 1px 2px rgb(141 58 33 / 0.25);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
   }
-  .btn-accent:hover:not(:disabled) { background-color: var(--color-clay-500); }
+  .btn-accent:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-accent-solid) 88%, black);
+  }
 
   .btn-ghost {
     background-color: transparent;
@@ -260,11 +403,31 @@ h1, h2, h3 {
   .badge-open     { background: var(--color-clay-50);  color: var(--color-clay-600);  border-color: var(--color-clay-100); }
   .badge-progress { background: var(--color-warn-50);  color: var(--color-warn-600);  border-color: var(--color-warn-100); }
   .badge-closed   { background: var(--color-ok-50);    color: var(--color-ok-600);    border-color: var(--color-ok-100); }
-  .badge-neutral  { background: var(--color-paper);    color: var(--color-ink-2);     border-color: var(--color-line); }
+  .badge-neutral  { background: var(--color-chip);     color: var(--color-ink-2);     border-color: var(--color-line); }
   .badge-brand    { background: var(--color-brand-50); color: var(--color-brand-700); border-color: var(--color-brand-100); }
 
   /* ---- misc ---- */
   .num { font-variant-numeric: tabular-nums; }
+
+  /* placeholder block used by the loading screens */
+  .skeleton {
+    border-radius: 0.5rem;
+    background-color: var(--color-line);
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--color-surface) 60%, transparent) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+  }
+
+  /* the for/against bar wipes open from the right edge */
+  .bar-reveal {
+    transform-origin: right;
+    animation: reveal-bar 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
 
   .eyebrow {
     font-size: 0.6875rem;

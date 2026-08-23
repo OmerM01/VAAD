@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireProfile } from '@/lib/auth';
 import { toHebrewError } from '@/lib/errors';
 import { VOTING_PERIODS, isVoteChoice } from '@/lib/proposals';
-import type { ActionState } from '@/lib/actions/state';
+import { done, type ActionState } from '@/lib/actions/state';
 
 /**
  * Any member may raise a proposal. creator_anonymous is stored on the row, but
@@ -86,7 +86,7 @@ export async function voteOnProposal(
   revalidatePath('/proposals');
   revalidatePath(`/proposals/${proposalId}`);
   revalidatePath('/dashboard');
-  return { error: null };
+  return done(_prev, 'ההצבעה שלך נקלטה');
 }
 
 /**
@@ -110,5 +110,5 @@ export async function closeProposal(
   revalidatePath('/proposals');
   revalidatePath(`/proposals/${id}`);
   revalidatePath('/dashboard');
-  return { error: null };
+  return done(_prev, 'ההצבעה נסגרה');
 }

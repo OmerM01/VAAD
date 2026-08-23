@@ -27,8 +27,19 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#1d3f60',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f3f0ea' },
+    { media: '(prefers-color-scheme: dark)', color: '#10151b' },
+  ],
 };
+
+/**
+ * Resolves the theme before the first paint, so a visitor on dark never sees a
+ * white flash. It always writes an explicit value, including for "system",
+ * which is what lets the stylesheet carry a single dark block instead of
+ * repeating every token under a media query.
+ */
+const THEME_BOOT = `try{var s=localStorage.getItem('vaad-theme');var d=s?s==='dark':matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.dataset.theme=d?'dark':'light'}catch(e){document.documentElement.dataset.theme='light'}`;
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
@@ -36,7 +47,11 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
       lang="he"
       dir="rtl"
       className={`${heebo.variable} ${frank.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+      </head>
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );

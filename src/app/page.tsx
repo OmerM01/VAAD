@@ -55,7 +55,7 @@ export default function HomePage() {
               ניהול ועד בית, בלי קבוצת הוואטסאפ
             </span>
 
-            <h1 className="animate-rise mt-6 font-display text-4xl leading-[1.15] font-bold text-brand-900 sm:text-6xl">
+            <h1 className="animate-rise mt-6 font-display text-4xl leading-[1.15] font-bold text-heading sm:text-6xl">
               הבניין שלכם,
               <br />
               <span className="text-clay-500">מנוהל במקום אחד.</span>
@@ -93,7 +93,7 @@ export default function HomePage() {
                 style={{ animationDelay: `${i * 90}ms` }}
               >
                 <span className={`badge border ${ACCENTS[f.accent]}`}>{f.label}</span>
-                <h2 className="mt-4 font-display text-xl font-bold text-brand-900">
+                <h2 className="mt-4 font-display text-xl font-bold text-heading">
                   {f.title}
                 </h2>
                 <p className="mt-2.5 text-[0.9375rem] leading-relaxed text-ink-2">
@@ -107,7 +107,7 @@ export default function HomePage() {
         {/* how it works */}
         <section className="mx-auto w-full max-w-6xl px-5 py-16 sm:py-20">
           <span className="eyebrow">איך מצטרפים</span>
-          <h2 className="mt-2 font-display text-2xl font-bold text-brand-900 sm:text-3xl">
+          <h2 className="mt-2 font-display text-2xl font-bold text-heading sm:text-3xl">
             שלושה צעדים, בלי טפסים
           </h2>
 
@@ -118,10 +118,10 @@ export default function HomePage() {
               ['כל אחד נרשם עם הקוד', 'והמערכת משייכת אותו לבניין ולתפקיד הנכון אוטומטית.'],
             ].map(([title, body], i) => (
               <li key={title} className="card relative p-6">
-                <span className="num absolute -top-3 right-5 flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
+                <span className="num absolute -top-3 right-5 flex h-7 w-7 items-center justify-center rounded-full bg-cta text-xs font-bold text-white">
                   {i + 1}
                 </span>
-                <h3 className="mt-1 font-display text-base font-bold text-brand-900">
+                <h3 className="mt-1 font-display text-base font-bold text-heading">
                   {title}
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-ink-2">{body}</p>

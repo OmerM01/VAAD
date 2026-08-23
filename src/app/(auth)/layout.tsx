@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { Wordmark } from '@/components/brand';
 import { BackLink } from '@/components/back-link';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function AuthLayout({ children }: LayoutProps<'/'>) {
   return (
@@ -10,7 +11,10 @@ export default function AuthLayout({ children }: LayoutProps<'/'>) {
         <Link href="/" className="inline-block">
           <Wordmark />
         </Link>
-        <BackLink />
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <BackLink />
+        </div>
       </header>
 
       <main className="flex flex-1 items-start justify-center px-5 pb-16">

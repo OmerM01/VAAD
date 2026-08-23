@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireProfile } from '@/lib/auth';
 import { toHebrewError } from '@/lib/errors';
 import { isFaultCategory, isFaultStatus } from '@/lib/faults';
-import type { ActionState } from '@/lib/actions/state';
+import { done, type ActionState } from '@/lib/actions/state';
 
 /**
  * Any member of the building may report a fault. building_id and reported_by
@@ -83,5 +83,5 @@ export async function updateFaultStatus(
   revalidatePath('/faults');
   revalidatePath(`/faults/${id}`);
   revalidatePath('/dashboard');
-  return { error: null };
+  return done(_prev, 'סטטוס התקלה עודכן');
 }

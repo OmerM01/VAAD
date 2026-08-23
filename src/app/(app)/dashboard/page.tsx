@@ -7,6 +7,7 @@ import { getMembers, memberLabel } from '@/lib/members';
 import { formatDay, formatMoney, greeting, relativeTime } from '@/lib/format';
 import { CATEGORY_LABEL, STATUS_BADGE, STATUS_LABEL } from '@/lib/faults';
 import { VoteBar } from '@/components/vote-bar';
+import { Counter } from '@/components/counter';
 import { Author } from '@/components/author';
 import { InviteCodesCard } from '@/components/invite-codes';
 import type {
@@ -79,7 +80,7 @@ export default async function DashboardPage({
         <span className="eyebrow">
           {greeting()}, {profile.fullName.split(' ')[0]}
         </span>
-        <h1 className="mt-1 font-display text-3xl font-bold text-brand-900">
+        <h1 className="mt-1 font-display text-3xl font-bold text-heading">
           {profile.building.name}
         </h1>
         <p className="mt-1.5 text-sm text-ink-2">
@@ -95,7 +96,7 @@ export default async function DashboardPage({
           href="/faults"
           accent="clay"
           label="תקלות שממתינות"
-          value={openFaults.length + inProgress.length}
+          value={<Counter value={openFaults.length + inProgress.length} />}
           caption={
             inProgress.length > 0
               ? `${openFaults.length} פתוחות · ${inProgress.length} בטיפול`
@@ -107,7 +108,7 @@ export default async function DashboardPage({
           href="/budget"
           accent={balance >= 0 ? 'brand' : 'danger'}
           label="יתרת התקציב"
-          value={formatMoney(balance)}
+          value={<Counter value={balance} format="money" />}
           caption={`מחושב מ-${budget.tx_count ?? 0} תנועות`}
           delay={70}
         />
@@ -115,7 +116,7 @@ export default async function DashboardPage({
           href="/proposals"
           accent="ok"
           label="הצעות בהצבעה"
-          value={liveProposals.length}
+          value={<Counter value={liveProposals.length} />}
           caption={
             awaitingMyVote.length > 0
               ? `${awaitingMyVote.length} ממתינות להצבעה שלך`
@@ -139,7 +140,7 @@ export default async function DashboardPage({
                   href={`/proposals/${proposal.id}`}
                   className="card group block h-full border-r-4 border-r-ok-500 p-5 transition-shadow duration-200 hover:shadow-[var(--shadow-lift)]"
                 >
-                  <h3 className="font-display text-base leading-snug font-bold text-brand-900 transition-colors group-hover:text-brand-600">
+                  <h3 className="font-display text-base leading-snug font-bold text-heading transition-colors group-hover:text-brand-600">
                     {proposal.title}
                   </h3>
                   <p className="mt-1.5 text-xs text-ink-3">
@@ -233,7 +234,7 @@ export default async function DashboardPage({
 
       <section className="card animate-rise p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-display text-lg font-bold text-brand-900">
+          <h2 className="font-display text-lg font-bold text-heading">
             דיירי הבניין
           </h2>
           <span className="num text-sm text-ink-3">{members.size} רשומים</span>
@@ -268,7 +269,7 @@ export default async function DashboardPage({
 
 const ACCENTS = {
   clay: 'from-clay-400 to-clay-300',
-  brand: 'from-brand-600 to-brand-400',
+  brand: 'from-cta to-brand-400',
   ok: 'from-ok-500 to-ok-500/60',
   danger: 'from-danger-500 to-danger-500/60',
 };
@@ -284,7 +285,7 @@ function StatTile({
   href: Route;
   accent: keyof typeof ACCENTS;
   label: string;
-  value: string | number;
+  value: React.ReactNode;
   caption: string;
   delay: number;
 }) {
@@ -313,7 +314,7 @@ function StatTile({
           <path d="m8 4 6 6-6 6" />
         </svg>
       </div>
-      <p className="num mt-2 font-display text-3xl font-bold text-brand-900">
+      <p className="num mt-2 font-display text-3xl font-bold text-heading">
         {value}
       </p>
       <p className="mt-1 text-xs text-ink-3">{caption}</p>
@@ -332,7 +333,7 @@ function SectionHead({
 }) {
   return (
     <div className="mb-2.5 flex items-baseline justify-between gap-3 px-1">
-      <h2 className="font-display text-lg font-bold text-brand-900">{title}</h2>
+      <h2 className="font-display text-lg font-bold text-heading">{title}</h2>
       <Link
         href={href as never}
         className="text-xs font-semibold text-brand-600 underline-offset-4 hover:underline"

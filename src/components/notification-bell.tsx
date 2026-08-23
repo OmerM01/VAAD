@@ -104,7 +104,7 @@ export function NotificationBell({ items }: { items: AppNotification[] }) {
       {open && (
         <div className="animate-rise absolute top-11 left-0 z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-line bg-surface shadow-[var(--shadow-lift)]">
           <div className="flex items-baseline justify-between gap-2 border-b border-line px-4 py-3">
-            <h2 className="font-display text-sm font-bold text-brand-900">
+            <h2 className="font-display text-sm font-bold text-heading">
               מה קרה בבניין
             </h2>
             {unread > 0 && (

@@ -17,7 +17,7 @@ export function VoteBar({
   return (
     <div>
       <div
-        className={`flex ${height} overflow-hidden rounded-full bg-line`}
+        className={`bar-reveal flex ${height} overflow-hidden rounded-full bg-line`}
         role="img"
         aria-label={`${votesFor} בעד, ${votesAgainst} נגד`}
       >

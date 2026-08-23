@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from 'react';
 
 import { createTransaction } from '@/lib/actions/budget';
 import { IDLE } from '@/lib/actions/state';
+import { useActionToast } from '@/components/toast';
 import { Field, FormError, SubmitButton } from '@/components/ui/form';
 import type { TransactionType } from '@/lib/database.types';
 
@@ -11,6 +12,7 @@ export function AddTransaction({ today }: { today: string }) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<TransactionType>('expense');
   const [state, action] = useActionState(createTransaction, IDLE);
+  useActionToast(state);
   const formRef = useRef<HTMLFormElement>(null);
   const submitted = useRef(false);
 
@@ -36,7 +38,7 @@ export function AddTransaction({ today }: { today: string }) {
     <section className="card animate-rise w-full p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-bold text-brand-900">
+          <h2 className="font-display text-lg font-bold text-heading">
             תנועה חדשה בתקציב
           </h2>
           <p className="mt-0.5 text-sm text-ink-2">

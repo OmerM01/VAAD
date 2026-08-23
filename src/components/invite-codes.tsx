@@ -21,7 +21,7 @@ const CARDS = [
 
 const TONES = {
   brand: {
-    chip: 'bg-brand-50 border-brand-100 text-brand-800',
+    chip: 'bg-brand-50 border-brand-100 text-heading',
     label: 'text-brand-600',
   },
   clay: {
@@ -34,7 +34,7 @@ export function InviteCodesCard({ codes }: { codes: InviteCodes }) {
   return (
     <section className="card p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display text-lg font-bold text-brand-900">
+        <h2 className="font-display text-lg font-bold text-heading">
           קודי ההצטרפות של הבניין
         </h2>
         <span className="badge badge-neutral">גלוי לחברי ועד בלבד</span>

@@ -9,7 +9,7 @@ export default function LoginPage() {
     <div className="animate-rise">
       <div className="card p-8">
         <span className="eyebrow">ברוך שובך</span>
-        <h1 className="mt-1.5 font-display text-2xl font-bold text-brand-900">
+        <h1 className="mt-1.5 font-display text-2xl font-bold text-heading">
           התחברות לחשבון
         </h1>
         <p className="mt-2 mb-7 text-sm text-ink-2">

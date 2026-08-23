@@ -4,6 +4,7 @@ import { useActionState, useState } from 'react';
 
 import { closeProposal } from '@/lib/actions/proposals';
 import { IDLE } from '@/lib/actions/state';
+import { useActionToast } from '@/components/toast';
 import { FormError, SubmitButton } from '@/components/ui/form';
 
 export function CloseProposalButton({
@@ -15,6 +16,7 @@ export function CloseProposalButton({
 }) {
   const [confirming, setConfirming] = useState(false);
   const [state, action] = useActionState(closeProposal, IDLE);
+  useActionToast(state);
 
   if (!confirming) {
     return (

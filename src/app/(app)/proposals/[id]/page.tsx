@@ -1,16 +1,15 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ViewTransition } from 'react';
 
 import { requireProfile } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { formatDateTime, relativeTime } from '@/lib/format';
 import { OUTCOME_TEXT, VOTE_LABEL, outcome } from '@/lib/proposals';
-import { VoteBar } from '@/components/vote-bar';
 import { Author } from '@/components/author';
 import type { ProposalResults, ProposalView } from '@/lib/database.types';
 
-import { VotePanel } from './vote-panel';
-import { CloseProposalButton } from './close-button';
+import { VoteSection } from './vote-section';
 
 export const metadata = { title: 'הצעה' };
 
@@ -38,7 +37,6 @@ export default async function ProposalPage({
   const result = outcome(proposal.votes_for, proposal.votes_against);
   // The member who raised it (anonymous or not), plus any vaad member.
   const canClose = isOpen && (proposal.is_mine || profile.role === 'vaad');
-  const totalVotes = proposal.votes_for + proposal.votes_against;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -66,9 +64,11 @@ export default async function ProposalPage({
           )}
         </div>
 
-        <h1 className="mt-3 font-display text-2xl leading-snug font-bold text-brand-900">
-          {proposal.title}
-        </h1>
+        <ViewTransition name={`proposal-${proposal.id}`} share="morph" default="none">
+          <h1 className="mt-3 font-display text-2xl leading-snug font-bold text-heading">
+            {proposal.title}
+          </h1>
+        </ViewTransition>
 
         <p className="mt-2 text-sm text-ink-3">
           הועלה על ידי{' '}
@@ -82,33 +82,23 @@ export default async function ProposalPage({
         ) : (
           <p className="mt-5 text-sm text-ink-3">לא נוסף פירוט להצעה.</p>
         )}
-
-        <div className="mt-7 border-t border-line pt-5">
-          <p className="eyebrow mb-2.5">התוצאה עד כה</p>
-          <VoteBar votesFor={proposal.votes_for} votesAgainst={proposal.votes_against} />
-        </div>
       </article>
 
-      {/* voting */}
-      <section className="card animate-rise p-6">
-        {!isOpen ? (
-          <ClosedNotice result={OUTCOME_TEXT[result].label} />
-        ) : proposal.my_vote ? (
-          <AlreadyVoted choice={VOTE_LABEL[proposal.my_vote]} />
-        ) : (
-          <VotePanel proposalId={proposal.id} />
-        )}
-
-        {canClose && (
-          <CloseProposalButton proposalId={proposal.id} totalVotes={totalVotes} />
-        )}
-      </section>
+      <VoteSection
+        proposalId={proposal.id}
+        isOpen={isOpen}
+        votesFor={proposal.votes_for}
+        votesAgainst={proposal.votes_against}
+        myVote={proposal.my_vote}
+        canClose={canClose}
+        closedLabel={OUTCOME_TEXT[result].label}
+      />
 
       {/* voter roll, populated only once the vote has closed */}
       {!isOpen && (
         <section className="card animate-rise p-6">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="font-display text-lg font-bold text-brand-900">
+            <h2 className="font-display text-lg font-bold text-heading">
               מי הצביע
             </h2>
             <span className="num text-sm text-ink-3">{voters.length} מצביעים</span>
@@ -161,42 +151,4 @@ export default async function ProposalPage({
   );
 }
 
-function AlreadyVoted({ choice }: { choice: string }) {
-  return (
-    <div className="flex items-start gap-3">
-      <svg viewBox="0 0 20 20" className="mt-0.5 h-5 w-5 shrink-0 text-ok-500" fill="currentColor" aria-hidden="true">
-        <path
-          fillRule="evenodd"
-          d="M10 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm3.7 6.2a.75.75 0 0 0-1.15-.96l-3.4 4.07-1.7-1.7a.75.75 0 1 0-1.06 1.06l2.28 2.28a.75.75 0 0 0 1.1-.05l3.93-4.7Z"
-          clipRule="evenodd"
-        />
-      </svg>
-      <div>
-        <p className="text-sm font-semibold text-ink">
-          הצבעת <span className="text-ok-500">{choice}</span>
-        </p>
-        <p className="mt-0.5 text-sm leading-relaxed text-ink-2">
-          כל דייר מצביע פעם אחת. המגבלה נאכפת גם באילוץ ייחודיות בבסיס הנתונים,
-          ולא רק בממשק.
-        </p>
-      </div>
-    </div>
-  );
-}
 
-function ClosedNotice({ result }: { result: string }) {
-  return (
-    <div className="flex items-start gap-3">
-      <svg viewBox="0 0 20 20" className="mt-0.5 h-5 w-5 shrink-0 text-ink-3" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
-        <rect x="4.5" y="8.5" width="11" height="8" rx="2" />
-        <path d="M7.5 8.5V6.75a2.5 2.5 0 0 1 5 0V8.5" />
-      </svg>
-      <div>
-        <p className="text-sm font-semibold text-ink">ההצבעה נסגרה — {result}</p>
-        <p className="mt-0.5 text-sm leading-relaxed text-ink-2">
-          לא ניתן להוסיף הצבעות אחרי מועד הסגירה.
-        </p>
-      </div>
-    </div>
-  );
-}

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ViewTransition } from 'react';
 
 import { createClient } from '@/lib/supabase/server';
 import { relativeTime } from '@/lib/format';
@@ -32,7 +33,7 @@ export default async function ProposalsPage({
       <div className="animate-rise flex flex-wrap items-end justify-between gap-4">
         <div>
           <span className="eyebrow">החלטות הבניין</span>
-          <h1 className="mt-1 font-display text-3xl font-bold text-brand-900">
+          <h1 className="mt-1 font-display text-3xl font-bold text-heading">
             הצעות והצבעות
           </h1>
           <p className="mt-1.5 text-sm text-ink-2">
@@ -88,9 +89,11 @@ function ProposalCard({ proposal }: { proposal: ProposalView }) {
         )}
       </div>
 
-      <h2 className="mt-3 font-display text-base leading-snug font-bold text-brand-900 transition-colors group-hover:text-brand-600">
-        {proposal.title}
-      </h2>
+      <ViewTransition name={`proposal-${proposal.id}`} share="morph" default="none">
+        <h2 className="mt-3 font-display text-base leading-snug font-bold text-heading transition-colors group-hover:text-brand-600">
+          {proposal.title}
+        </h2>
+      </ViewTransition>
 
       {proposal.description && (
         <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-ink-2">
@@ -133,7 +136,7 @@ function FilterChip({
       aria-current={active ? 'page' : undefined}
       className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors ${
         active
-          ? 'border-brand-600 bg-brand-600 text-white'
+          ? 'border-cta bg-cta text-cta-ink'
           : 'border-line-strong bg-surface text-ink-2 hover:border-ink-3 hover:text-ink'
       }`}
     >
@@ -152,7 +155,7 @@ function EmptyState({ filtered }: { filtered: boolean }) {
         <path d="M24 6v10M12 20h24l-3 18a3 3 0 0 1-3 2.6H18a3 3 0 0 1-3-2.6L12 20Z" strokeLinejoin="round" />
         <circle cx="24" cy="6" r="2.5" />
       </svg>
-      <p className="mt-4 font-display text-lg font-bold text-brand-900">
+      <p className="mt-4 font-display text-lg font-bold text-heading">
         {filtered ? 'אין הצעות בסטטוס הזה' : 'עדיין לא הועלו הצעות'}
       </p>
       <p className="mt-1 max-w-sm text-sm leading-relaxed text-ink-2">
