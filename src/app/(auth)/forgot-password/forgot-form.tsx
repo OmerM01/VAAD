@@ -4,10 +4,16 @@ import { useActionState } from 'react';
 
 import { requestPasswordReset } from '@/lib/actions/auth';
 import { RESET_IDLE } from '@/lib/actions/state';
-import { Field, FormError, SubmitButton } from '@/components/ui/form';
+import {
+  Field,
+  FormError,
+  SubmitButton,
+  useStickyFields,
+} from '@/components/ui/form';
 
-export function ForgotPasswordForm() {
+export function ForgotPasswordForm({ initialEmail = '' }: { initialEmail?: string }) {
   const [state, action] = useActionState(requestPasswordReset, RESET_IDLE);
+  const { field } = useStickyFields({ email: initialEmail });
 
   if (state.sent) {
     return (
@@ -33,7 +39,7 @@ export function ForgotPasswordForm() {
 
       <Field label="אימייל">
         <input
-          name="email"
+          {...field('email')}
           type="email"
           dir="ltr"
           autoComplete="email"

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useFormStatus } from 'react-dom';
 
 export function SubmitButton({
@@ -81,4 +82,26 @@ export function Field({
       {children}
     </div>
   );
+}
+
+/**
+ * Keeps typed values across a failed submission.
+ *
+ * React resets an uncontrolled form once its action completes, which is right
+ * after a success but wrong after an error: the resident retypes everything to
+ * fix one field. Binding the fields worth keeping to state survives the reset.
+ */
+export function useStickyFields(initial: Record<string, string> = {}) {
+  const [values, setValues] = useState<Record<string, string>>(initial);
+
+  function field(name: string) {
+    return {
+      name,
+      value: values[name] ?? '',
+      onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+        setValues((current) => ({ ...current, [name]: event.target.value })),
+    };
+  }
+
+  return { values, field };
 }

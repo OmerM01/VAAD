@@ -4,9 +4,15 @@ import { useActionState, useState } from 'react';
 
 import { signUpAndCreateBuilding, signUpAndJoin } from '@/lib/actions/auth';
 import { IDLE } from '@/lib/actions/state';
-import { Field, FormError, SubmitButton } from '@/components/ui/form';
+import {
+  Field,
+  FormError,
+  SubmitButton,
+  useStickyFields,
+} from '@/components/ui/form';
 
 type Mode = 'join' | 'create';
+type FieldFn = ReturnType<typeof useStickyFields>['field'];
 
 const TABS: { id: Mode; label: string; caption: string }[] = [
   { id: 'join', label: 'יש לי קוד', caption: 'הצטרפות לבניין קיים' },
@@ -16,9 +22,12 @@ const TABS: { id: Mode; label: string; caption: string }[] = [
 export function SignupForm({ initialMode = 'join' }: { initialMode?: Mode }) {
   const [mode, setMode] = useState<Mode>(initialMode);
 
+  // Held here rather than in each sub-form, so the details survive both a
+  // failed submission and a switch between the two tabs.
+  const { field } = useStickyFields();
+
   return (
     <div>
-      {/* mode switch */}
       <div
         role="tablist"
         aria-label="סוג הרשמה"
@@ -50,19 +59,19 @@ export function SignupForm({ initialMode = 'join' }: { initialMode?: Mode }) {
       </div>
 
       <div className="mt-6">
-        {mode === 'join' ? <JoinForm /> : <CreateForm />}
+        {mode === 'join' ? <JoinForm field={field} /> : <CreateForm field={field} />}
       </div>
     </div>
   );
 }
 
 /** Account fields, identical in both signup flows. */
-function AccountFields() {
+function AccountFields({ field }: { field: FieldFn }) {
   return (
     <>
       <Field label="אימייל">
         <input
-          name="email"
+          {...field('email')}
           type="email"
           dir="ltr"
           autoComplete="email"
@@ -87,7 +96,7 @@ function AccountFields() {
       <div className="grid gap-4 sm:grid-cols-[1fr_8rem]">
         <Field label="שם מלא">
           <input
-            name="full_name"
+            {...field('full_name')}
             type="text"
             autoComplete="name"
             required
@@ -98,7 +107,7 @@ function AccountFields() {
 
         <Field label="מספר דירה" hint="לא חובה">
           <input
-            name="apartment_number"
+            {...field('apartment_number')}
             type="text"
             maxLength={10}
             className="input"
@@ -110,8 +119,9 @@ function AccountFields() {
   );
 }
 
-function JoinForm() {
+function JoinForm({ field }: { field: FieldFn }) {
   const [state, action] = useActionState(signUpAndJoin, IDLE);
+  const code = field('invite_code');
 
   return (
     <form action={action} className="animate-slide-in space-y-4">
@@ -119,7 +129,11 @@ function JoinForm() {
 
       <Field label="קוד הצטרפות" hint="8 תווים, מהוועד של הבניין">
         <input
-          name="invite_code"
+          {...code}
+          onChange={(event) => {
+            event.target.value = event.target.value.toUpperCase();
+            code.onChange(event);
+          }}
           type="text"
           dir="ltr"
           required
@@ -128,9 +142,6 @@ function JoinForm() {
           spellCheck={false}
           className="input code-chip text-center uppercase"
           placeholder="ABCD2345"
-          onInput={(e) => {
-            e.currentTarget.value = e.currentTarget.value.toUpperCase();
-          }}
         />
       </Field>
 
@@ -139,14 +150,14 @@ function JoinForm() {
         צורך לבחור כלום ידנית.
       </p>
 
-      <AccountFields />
+      <AccountFields field={field} />
 
       <SubmitButton pendingLabel="מצטרף…">הצטרפות לבניין</SubmitButton>
     </form>
   );
 }
 
-function CreateForm() {
+function CreateForm({ field }: { field: FieldFn }) {
   const [state, action] = useActionState(signUpAndCreateBuilding, IDLE);
 
   return (
@@ -155,7 +166,7 @@ function CreateForm() {
 
       <Field label="שם הבניין">
         <input
-          name="building_name"
+          {...field('building_name')}
           type="text"
           required
           className="input"
@@ -165,7 +176,7 @@ function CreateForm() {
 
       <Field label="כתובת מלאה" hint="לא חובה">
         <input
-          name="address"
+          {...field('address')}
           type="text"
           className="input"
           placeholder="הרצל 15, תל אביב"
@@ -177,7 +188,7 @@ function CreateForm() {
         אוטומטית כחבר ועד של הבניין.
       </p>
 
-      <AccountFields />
+      <AccountFields field={field} />
 
       <SubmitButton pendingLabel="יוצר בניין…">יצירת הבניין</SubmitButton>
     </form>

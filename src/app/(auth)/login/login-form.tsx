@@ -2,13 +2,27 @@
 
 import Link from 'next/link';
 import { useActionState } from 'react';
+import type { Route } from 'next';
 
 import { signIn } from '@/lib/actions/auth';
 import { IDLE } from '@/lib/actions/state';
-import { Field, FormError, SubmitButton } from '@/components/ui/form';
+import {
+  Field,
+  FormError,
+  SubmitButton,
+  useStickyFields,
+} from '@/components/ui/form';
 
-export function LoginForm() {
+export function LoginForm({ initialEmail = '' }: { initialEmail?: string }) {
   const [state, action] = useActionState(signIn, IDLE);
+  const { values, field } = useStickyFields({ email: initialEmail });
+
+  // carry whatever was typed over to the reset screen rather than asking for it
+  const forgotHref = (
+    values.email
+      ? `/forgot-password?email=${encodeURIComponent(values.email)}`
+      : '/forgot-password'
+  ) as Route;
 
   return (
     <form action={action} className="space-y-4">
@@ -16,7 +30,7 @@ export function LoginForm() {
 
       <Field label="אימייל">
         <input
-          name="email"
+          {...field('email')}
           type="email"
           dir="ltr"
           autoComplete="email"
@@ -30,7 +44,7 @@ export function LoginForm() {
         <div className="flex items-baseline justify-between gap-3">
           <label className="field-label">סיסמה</label>
           <Link
-            href="/forgot-password"
+            href={forgotHref}
             className="mb-1.5 text-xs font-semibold text-brand-600 underline-offset-4 hover:underline"
           >
             שכחתי סיסמה

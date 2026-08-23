@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Route } from 'next';
 
 import { ForgotPasswordForm } from './forgot-form';
 
@@ -7,7 +8,9 @@ export const metadata = { title: 'איפוס סיסמה' };
 export default async function ForgotPasswordPage({
   searchParams,
 }: PageProps<'/forgot-password'>) {
-  const { expired } = await searchParams;
+  const { expired, email } = await searchParams;
+  const prefill = typeof email === 'string' ? email : '';
+  const backHref = (prefill ? `/login?email=${encodeURIComponent(prefill)}` : '/login') as Route;
 
   return (
     <div className="animate-rise">
@@ -36,13 +39,13 @@ export default async function ForgotPasswordPage({
           </p>
         )}
 
-        <ForgotPasswordForm />
+        <ForgotPasswordForm initialEmail={prefill} />
       </div>
 
       <p className="mt-5 text-center text-sm text-ink-2">
         נזכרת בסיסמה?{' '}
         <Link
-          href="/login"
+          href={backHref}
           className="font-semibold text-brand-600 underline-offset-4 hover:underline"
         >
           חזרה להתחברות

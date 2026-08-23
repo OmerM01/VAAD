@@ -4,7 +4,8 @@ import { LoginForm } from './login-form';
 
 export const metadata = { title: 'התחברות' };
 
-export default function LoginPage() {
+export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
+  const { email } = await searchParams;
   return (
     <div className="animate-rise">
       <div className="card p-8">
@@ -16,7 +17,7 @@ export default function LoginPage() {
           אחרי ההרשמה הראשונה כבר לא צריך קוד — רק אימייל וסיסמה.
         </p>
 
-        <LoginForm />
+        <LoginForm initialEmail={typeof email === 'string' ? email : ''} />
       </div>
 
       <p className="mt-5 text-center text-sm text-ink-2">

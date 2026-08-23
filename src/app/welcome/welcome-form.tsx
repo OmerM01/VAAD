@@ -4,12 +4,20 @@ import { useActionState, useState } from 'react';
 
 import { completeCreateBuilding, completeJoin } from '@/lib/actions/auth';
 import { IDLE } from '@/lib/actions/state';
-import { Field, FormError, SubmitButton } from '@/components/ui/form';
+import {
+  Field,
+  FormError,
+  SubmitButton,
+  useStickyFields,
+} from '@/components/ui/form';
 
 type Mode = 'join' | 'create';
 
+type FieldFn = ReturnType<typeof useStickyFields>['field'];
+
 export function WelcomeForm() {
   const [mode, setMode] = useState<Mode>('join');
+  const { field } = useStickyFields();
 
   return (
     <div>
@@ -33,17 +41,19 @@ export function WelcomeForm() {
         ))}
       </div>
 
-      <div className="mt-5">{mode === 'join' ? <JoinForm /> : <CreateForm />}</div>
+      <div className="mt-5">
+        {mode === 'join' ? <JoinForm field={field} /> : <CreateForm field={field} />}
+      </div>
     </div>
   );
 }
 
-function NameFields() {
+function NameFields({ field }: { field: FieldFn }) {
   return (
     <div className="grid gap-4 sm:grid-cols-[1fr_8rem]">
       <Field label="שם מלא">
         <input
-          name="full_name"
+          {...field('full_name')}
           type="text"
           autoComplete="name"
           required
@@ -53,7 +63,7 @@ function NameFields() {
       </Field>
       <Field label="מספר דירה" hint="לא חובה">
         <input
-          name="apartment_number"
+          {...field('apartment_number')}
           type="text"
           maxLength={10}
           className="input"
@@ -64,8 +74,9 @@ function NameFields() {
   );
 }
 
-function JoinForm() {
+function JoinForm({ field }: { field: FieldFn }) {
   const [state, action] = useActionState(completeJoin, IDLE);
+  const code = field('invite_code');
 
   return (
     <form action={action} className="animate-slide-in space-y-4">
@@ -73,7 +84,11 @@ function JoinForm() {
 
       <Field label="קוד הצטרפות" hint="8 תווים">
         <input
-          name="invite_code"
+          {...code}
+          onChange={(event) => {
+            event.target.value = event.target.value.toUpperCase();
+            code.onChange(event);
+          }}
           type="text"
           dir="ltr"
           required
@@ -81,19 +96,16 @@ function JoinForm() {
           spellCheck={false}
           className="input code-chip text-center uppercase"
           placeholder="ABCD2345"
-          onInput={(e) => {
-            e.currentTarget.value = e.currentTarget.value.toUpperCase();
-          }}
         />
       </Field>
 
-      <NameFields />
+      <NameFields field={field} />
       <SubmitButton pendingLabel="מצטרף…">הצטרפות לבניין</SubmitButton>
     </form>
   );
 }
 
-function CreateForm() {
+function CreateForm({ field }: { field: FieldFn }) {
   const [state, action] = useActionState(completeCreateBuilding, IDLE);
 
   return (
@@ -101,13 +113,13 @@ function CreateForm() {
       <FormError message={state.error} />
 
       <Field label="שם הבניין">
-        <input name="building_name" type="text" required className="input" placeholder="הרצל 15" />
+        <input {...field('building_name')} type="text" required className="input" placeholder="הרצל 15" />
       </Field>
       <Field label="כתובת מלאה" hint="לא חובה">
-        <input name="address" type="text" className="input" placeholder="הרצל 15, תל אביב" />
+        <input {...field('address')} type="text" className="input" placeholder="הרצל 15, תל אביב" />
       </Field>
 
-      <NameFields />
+      <NameFields field={field} />
       <SubmitButton pendingLabel="יוצר בניין…">יצירת הבניין</SubmitButton>
     </form>
   );
