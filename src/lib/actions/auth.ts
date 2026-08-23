@@ -272,3 +272,40 @@ export async function updatePassword(
   revalidatePath('/', 'layout');
   redirect('/dashboard');
 }
+
+// -----------------------------------------------------------------------------
+//  Demo access
+// -----------------------------------------------------------------------------
+
+/**
+ * Signs into one of the two prepared demo accounts.
+ *
+ * They are ordinary members of an ordinary building, so nothing here is a
+ * special case in the permission model: the committee account can update fault
+ * statuses and record transactions, the resident account cannot, and both are
+ * refused everything outside their building. Only the password lives in the
+ * environment, so the repository carries no credentials.
+ */
+export async function signInAsDemo(
+  _prev: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const role = form.get('role');
+  const password = process.env.DEMO_PASSWORD;
+
+  if (role !== 'vaad' && role !== 'dayar') return { error: 'תפקיד לא מזוהה.' };
+  if (!password) return { error: 'הדמו אינו זמין בסביבה הזו.' };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({
+    email: `demo.${role}@vaad-demo.app`,
+    password,
+  });
+
+  if (error) {
+    return { error: 'לא ניתן להיכנס לדמו כרגע. נסה שוב בעוד רגע.' };
+  }
+
+  revalidatePath('/', 'layout');
+  redirect('/dashboard');
+}

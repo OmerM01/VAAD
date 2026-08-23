@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { LoginForm } from './login-form';
+import { DemoAccess } from './demo-access';
 
 export const metadata = { title: 'התחברות' };
 
@@ -19,6 +20,9 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
 
         <LoginForm initialEmail={typeof email === 'string' ? email : ''} />
       </div>
+
+      {/* only offered where the demo password is configured */}
+      {process.env.DEMO_PASSWORD && <DemoAccess />}
 
       <p className="mt-5 text-center text-sm text-ink-2">
         עדיין אין לך חשבון?{' '}

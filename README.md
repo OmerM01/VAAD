@@ -11,6 +11,12 @@ right-to-left.
 
 **Live:** https://vaad-one.vercel.app
 
+The sign-in screen offers a prepared demo building, as either a committee member
+or a resident, so the app can be looked at without signing up. The two accounts
+are ordinary members of an ordinary building: the permission model treats them
+like anyone else, which is the point — the difference between the two buttons is
+the real difference between the two roles.
+
 ## The problem
 
 Building committees are usually run from a WhatsApp group plus a spreadsheet
@@ -65,11 +71,25 @@ npm run dev
    the app: Supabase does not report an error for a URL that is not on the list,
    it simply ignores it.
 
+### The demo building
+
+```bash
+python scripts/seed_demo.py
+```
+
+Creates seven residents, ten faults across every status and category, five
+months of ledger entries including a cancelled one, and five proposals with
+mixed anonymity. Set `DEMO_PASSWORD` in `.env.local` first; the buttons only
+appear where that variable is present, so a deployment without it simply has no
+demo. Re-running the script is safe — it prints the SQL to clear the content if
+you want it rebuilt from scratch.
+
 ### Deploying
 
-Import the repository on Vercel and set `NEXT_PUBLIC_SUPABASE_URL` and
-`NEXT_PUBLIC_SUPABASE_ANON_KEY` under **Settings → Environment Variables**. No
-build configuration is needed; Vercel detects Next.js on its own.
+Import the repository on Vercel and set `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` and `DEMO_PASSWORD` under
+**Settings → Environment Variables**. No build configuration is needed; Vercel
+detects Next.js on its own.
 
 ## Permission model
 
@@ -159,6 +179,8 @@ src/
   proxy.ts             session refresh and private-route guard
 supabase/
   schema.sql           tables, RLS and server-side functions
+scripts/
+  seed_demo.py         fills the demo building
 tests/
   rls_test.py          API-level security tests
 ```
