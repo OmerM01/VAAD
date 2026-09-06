@@ -85,6 +85,14 @@ appear where that variable is present, so a deployment without it simply has no
 demo. Re-running the script is safe — it prints the SQL to clear the content if
 you want it rebuilt from scratch.
 
+Anything with a deadline goes stale on its own: proposals close, notices expire.
+A demo left alone for a few weeks ends up with nothing to vote on, so top up the
+time-sensitive parts without touching the rest:
+
+```bash
+python scripts/seed_demo.py --refresh
+```
+
 ### Deploying
 
 Import the repository on Vercel and set `NEXT_PUBLIC_SUPABASE_URL`,

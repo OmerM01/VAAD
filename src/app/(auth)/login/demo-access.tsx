@@ -1,14 +1,18 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 
 import { signInAsDemo } from '@/lib/actions/auth';
 import { IDLE } from '@/lib/actions/state';
 import { FormError, Spinner } from '@/components/ui/form';
 
+type Role = 'vaad' | 'dayar';
+
 export function DemoAccess() {
   const [state, action] = useActionState(signInAsDemo, IDLE);
+  // which button was pressed, so only that one shows the spinner
+  const [chosen, setChosen] = useState<Role | null>(null);
 
   return (
     <form action={action} className="card-quiet mt-5 p-5">
@@ -46,11 +50,15 @@ export function DemoAccess() {
           role="vaad"
           label="כניסה כחבר ועד"
           hint="מעדכן תקלות ומזין תקציב"
+          chosen={chosen}
+          onChoose={setChosen}
         />
         <DemoButton
           role="dayar"
           label="כניסה כדייר"
           hint="מדווח, צופה ומצביע"
+          chosen={chosen}
+          onChoose={setChosen}
         />
       </div>
     </form>
@@ -61,18 +69,24 @@ function DemoButton({
   role,
   label,
   hint,
+  chosen,
+  onChoose,
 }: {
-  role: 'vaad' | 'dayar';
+  role: Role;
   label: string;
   hint: string;
+  chosen: Role | null;
+  onChoose: (role: Role) => void;
 }) {
   const { pending } = useFormStatus();
+  const busy = pending && chosen === role;
 
   return (
     <button
       type="submit"
       name="role"
       value={role}
+      onClick={() => onChoose(role)}
       disabled={pending}
       className="group flex items-center justify-between gap-2 rounded-lg border border-line-strong bg-surface px-3.5 py-2.5 text-right transition-all duration-200 hover:border-brand-400 active:scale-[0.98] disabled:opacity-50"
     >
@@ -80,7 +94,7 @@ function DemoButton({
         <span className="block text-sm font-bold text-heading">{label}</span>
         <span className="mt-0.5 block text-[0.6875rem] text-ink-3">{hint}</span>
       </span>
-      {pending ? (
+      {busy ? (
         <Spinner className="h-4 w-4 shrink-0 text-ink-3" />
       ) : (
         <svg

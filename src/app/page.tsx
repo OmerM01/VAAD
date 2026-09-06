@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { Wordmark } from '@/components/brand';
+import { DemoEntry } from '@/components/demo-entry';
 
 const FEATURES = [
   {
@@ -79,6 +80,8 @@ export default function HomePage() {
               <Link href="/signup?mode=join" className="btn btn-ghost">
                 יש לי קוד הצטרפות
               </Link>
+              {/* only where the demo password is configured */}
+              {process.env.DEMO_PASSWORD && <DemoEntry />}
             </div>
           </div>
         </section>

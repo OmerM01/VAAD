@@ -10,6 +10,12 @@ It is safe to re-run: accounts that already exist are signed into rather than
 created. To start the content over, first run the wipe block printed at the end
 in the Supabase SQL editor, then run this again.
 
+Anything with a deadline goes stale on its own — proposals close, notices expire
+— so a demo left alone for a few weeks ends up with nothing to vote on. Top it
+back up without touching the rest:
+
+    python scripts/seed_demo.py --refresh
+
 Reads NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY and DEMO_PASSWORD
 from .env.local.
 """
@@ -180,9 +186,113 @@ else:
 
 USERS = {key: uid(token) for key, token in tokens.items()}
 
-if get(tokens["vaad"], "faults?select=id&limit=1")[1]:
+if get(tokens["vaad"], "faults?select=id&limit=1")[1] and "--refresh" not in sys.argv:
     print("\ncontent already present — nothing to add")
+    print("to top up proposals and shared orders that have expired, pass --refresh")
     print("\nto rebuild it, run this in the Supabase SQL editor and then re-run this script:")
+    sys.exit(0)
+
+# ---------------------------------------------------------------------------
+#  Refresh mode
+#
+#  Only the time-sensitive content. Closed proposals and expired notices are
+#  left where they are: they are what the "finished" tabs are meant to show.
+# ---------------------------------------------------------------------------
+
+if "--refresh" in sys.argv:
+    print("\nrefresh")
+
+    live = [
+        p
+        for p in rpc(tokens["vaad"], "get_proposals", {"p_id": None})[1]
+        if p["status"] == "open"
+    ]
+    if live:
+        print(f"  {len(live)} proposals still open — leaving them")
+    else:
+        FRESH_PROPOSALS = [
+            {
+                "by": "vaad",
+                "title": "להחליף את דלת הכניסה לדלת עם קוד",
+                "desc": "המנעול הנוכחי נתקע שוב, וכבר שילמנו על שני תיקונים. דלת עם קוד תחסוך גם את העותקים האבודים של המפתח. הצעת מחיר: 4,900 ש\"ח כולל התקנה.",
+                "anon": False,
+                "closes": 9,
+                "votes": [("dayar", "for", False), ("neta", "for", True), ("avi", "against", False)],
+            },
+            {
+                "by": "neta",
+                "title": "לצבוע מחדש את חדר המדרגות",
+                "desc": "הצבע מתקלף בקומות התחתונות מאז הנזילה. שתי הצעות מחיר בטווח 5,000 עד 6,500 ש\"ח.",
+                "anon": True,
+                "closes": 16,
+                "votes": [("vaad", "for", False), ("ronit", "for", False), ("omer", "against", True)],
+            },
+        ]
+        for spec in FRESH_PROPOSALS:
+            status_code, data = insert(
+                tokens[spec["by"]],
+                "proposals",
+                {
+                    "building_id": BUILDING,
+                    "created_by": USERS[spec["by"]],
+                    "title": spec["title"],
+                    "description": spec["desc"],
+                    "creator_anonymous": spec["anon"],
+                    "closes_at": ahead(spec["closes"]),
+                },
+                select="id",
+            )
+            if status_code != 201:
+                print("  FAILED", spec["title"], status_code, data)
+                continue
+            for who, choice, anon in spec["votes"]:
+                rpc(
+                    tokens[who],
+                    "vote_on_proposal",
+                    {"p_proposal_id": data[0]["id"], "p_vote": choice, "p_anonymous": anon},
+                )
+            print(f"  + הצעה פתוחה ל-{spec['closes']} ימים: {spec['title']}")
+
+    notices = get(tokens["vaad"], "neighbour_posts?select=kind,status,expires_at")[1]
+    now = NOW.isoformat()
+    active_buys = [
+        n
+        for n in notices
+        if n["kind"] == "group_buy"
+        and n["status"] == "active"
+        and (n["expires_at"] or "") > now
+    ]
+    if active_buys:
+        print("  a shared order is still running — leaving it")
+    else:
+        status_code, data = insert(
+            tokens["ronit"],
+            "neighbour_posts",
+            {
+                "building_id": BUILDING,
+                "created_by": USERS["ronit"],
+                "kind": "group_buy",
+                "title": "ארגז ירקות מחקלאי — ההזמנה הבאה",
+                "description": "ממשיכה עם ההזמנה הקבועה כל שבועיים, ישירות מחקלאי בשרון. ארגז מעורב של כ-8 ק״ג, מגיע ביום חמישי אחר הצהריים לכניסה. צריך שישה מזמינים כדי שהמשלוח ישתלם.",
+                "price_note": "כ-90 ש״ח לארגז",
+                "contact": "ווטסאפ 053-555-2211",
+                "expires_at": ahead(13),
+            },
+            select="id",
+        )
+        if status_code == 201:
+            for joiner in ["vaad", "neta", "avi", "dayar"]:
+                insert(
+                    tokens[joiner],
+                    "post_interests",
+                    {"post_id": data[0]["id"], "user_id": USERS[joiner]},
+                    select="id",
+                )
+            print("  + קנייה מרוכזת חדשה, עם ארבעה נרשמים")
+        else:
+            print("  FAILED group buy", status_code, data)
+
+    print("\ndone.")
     sys.exit(0)
 
 # ---------------------------------------------------------------------------
