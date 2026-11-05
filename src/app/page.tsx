@@ -380,7 +380,7 @@ function BuildingArt() {
       </div>
 
       {/* readings lifted off the building */}
-      <Floating className="-top-5 -left-6" delay="0s" label="יתרת הקופה" value="‏9,541 ₪" />
+      <Floating className="-top-9 -left-12" delay="0s" label="יתרת הקופה" value="‏9,541 ₪" />
       <Floating className="top-[46%] -right-14" delay="1.4s" label="תקלות פתוחות" value="5" tone={FLAME} />
       <Floating className="-bottom-7 left-0" delay="2.6s" label="הצבעה נסגרת" value="בעוד 8 ימים" />
     </div>
