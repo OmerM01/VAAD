@@ -1,19 +1,19 @@
 import type { Metadata, Viewport } from 'next';
-import { Heebo, Frank_Ruhl_Libre } from 'next/font/google';
+import { Rubik, Secular_One } from 'next/font/google';
 
 import './globals.css';
 
-const heebo = Heebo({
-  variable: '--font-heebo',
+const rubik = Rubik({
+  variable: '--font-body',
   subsets: ['hebrew', 'latin'],
-  weight: ['400', '500', '600', '700'],
+  weight: ['300', '400', '500', '600', '700'],
   display: 'swap',
 });
 
-const frank = Frank_Ruhl_Libre({
-  variable: '--font-frank',
+const secular = Secular_One({
+  variable: '--font-display-face',
   subsets: ['hebrew', 'latin'],
-  weight: ['500', '700', '900'],
+  weight: ['400'],
   display: 'swap',
 });
 
@@ -46,7 +46,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     <html
       lang="he"
       dir="rtl"
-      className={`${heebo.variable} ${frank.variable} h-full antialiased`}
+      className={`${rubik.variable} ${secular.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

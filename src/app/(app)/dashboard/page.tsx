@@ -79,7 +79,7 @@ export default async function DashboardPage({
 
       {/* ---- welcome band, with the figures sitting on its lower edge ---- */}
       <section
-        className="animate-rise relative overflow-hidden rounded-2xl px-6 pt-8 pb-28 sm:px-9 sm:pt-11"
+        className="animate-rise waves-night relative overflow-hidden rounded-2xl px-6 pt-8 pb-28 sm:px-9 sm:pt-11"
         style={{ background: NIGHT }}
       >
         <div
@@ -180,7 +180,7 @@ export default async function DashboardPage({
                 <li key={proposal.id}>
                   <Link
                     href={`/proposals/${proposal.id}`}
-                    className="card group block h-full border-r-4 border-r-ok-500 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]"
+                    className="card springy group block h-full border-r-4 border-r-ok-500 p-5 hover:shadow-[var(--shadow-lift)]"
                   >
                     <h3 className="font-display text-base leading-snug font-bold text-heading transition-colors group-hover:text-brand-600">
                       {proposal.title}
@@ -308,17 +308,18 @@ export default async function DashboardPage({
 /** The building motif from the landing page, shrunk to a corner ornament. */
 function WindowMark() {
   const lit = [1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1];
+  const eyes = [3, 5];
   return (
     <div
       aria-hidden
-      className="hidden shrink-0 rounded-xl p-3 sm:block"
+      className="neon-ring hidden shrink-0 rounded-xl p-3 sm:block"
       style={{ background: PANEL, border: `1px solid ${EDGE}` }}
     >
       <div className="grid grid-cols-3 gap-2">
         {lit.map((on, i) => (
           <span
             key={i}
-            className={on ? 'lamp' : ''}
+            className={eyes.includes(i) ? 'blink' : on ? 'lamp' : ''}
             style={{
               display: 'block',
               width: '0.8rem',
@@ -360,7 +361,7 @@ function StatTile({
   return (
     <Link
       href={href}
-      className="card animate-rise group relative overflow-hidden p-5 shadow-[var(--shadow-lift)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_18px_44px_-12px_rgb(22_32_43/0.28)]"
+      className="card springy animate-rise group relative overflow-hidden p-5 shadow-[var(--shadow-lift)] hover:shadow-[0_18px_44px_-12px_rgb(22_32_43/0.28)]"
       style={{ animationDelay: `${delay}ms` }}
     >
       <span

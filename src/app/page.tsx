@@ -14,6 +14,9 @@ const FLAME = '#e07f5c';
 
 /* Which windows of the building are lit. A fixed pattern rather than a random
    one: the server and the browser have to agree on it. */
+/** The two windows that blink in step, which is the whole of the face. */
+const EYES = [11, 13];
+
 const WINDOWS = [
   1, 0, 1, 1, 0,
   1, 1, 0, 1, 1,
@@ -116,7 +119,7 @@ export default function HomePage() {
             </div>
 
             <h1
-              className="animate-rise mt-7 font-display text-[2.5rem] leading-[1.1] font-bold sm:text-6xl"
+              className="animate-rise mt-7 font-display text-[2.1rem] leading-[1.15] font-bold sm:text-[3.1rem]"
               style={{ color: '#ffffff' }}
             >
               ועד בית הוא הדבר
@@ -214,7 +217,7 @@ export default function HomePage() {
             {FEATURES.map((f) => (
               <article
                 key={f.tag}
-                className="group card p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-lift sm:p-8"
+                className="group card springy p-7 hover:shadow-lift sm:p-8"
               >
                 <span className={`badge border ${TAGS[f.accent]}`}>{f.tag}</span>
                 <h3 className="mt-4 font-display text-xl leading-snug font-bold text-heading">
@@ -282,7 +285,7 @@ export default function HomePage() {
           />
           <div className="relative mx-auto w-full max-w-3xl px-5 py-20 text-center sm:py-28">
             <h2
-              className="font-display text-3xl leading-tight font-bold sm:text-5xl"
+              className="font-display text-3xl leading-tight font-bold sm:text-[2.75rem]"
               style={{ color: '#ffffff' }}
             >
               הבניין לדוגמה פתוח.
@@ -346,7 +349,7 @@ function BuildingArt() {
   return (
     <div className="animate-fade relative mx-auto w-full max-w-[20rem]" style={{ animationDelay: '240ms' }}>
       <div
-        className="rounded-3xl p-5 shadow-2xl"
+        className="waves-night neon-ring relative rounded-3xl p-5 shadow-2xl"
         style={{ background: PANEL, border: `1px solid ${EDGE}` }}
       >
         <div className="mb-5 flex items-center justify-between">
@@ -363,7 +366,7 @@ function BuildingArt() {
           {WINDOWS.map((lit, i) => (
             <span
               key={i}
-              className={lit ? 'lamp' : ''}
+              className={EYES.includes(i) ? 'blink' : lit ? 'lamp' : ''}
               style={{
                 display: 'block',
                 aspectRatio: '1 / 1',
@@ -379,11 +382,29 @@ function BuildingArt() {
         <div className="mt-5 h-1.5 rounded-full" style={{ background: EDGE }} />
       </div>
 
+      <Twinkle className="-top-3 right-6" delay="0s" />
+      <Twinkle className="top-20 -left-5" delay="0.9s" />
+      <Twinkle className="bottom-16 -right-4" delay="1.8s" />
+
       {/* readings lifted off the building */}
       <Floating className="-top-9 -left-12" delay="0s" label="יתרת הקופה" value="‏9,541 ₪" />
       <Floating className="top-[46%] -right-14" delay="1.4s" label="תקלות פתוחות" value="5" tone={FLAME} />
       <Floating className="-bottom-7 left-0" delay="2.6s" label="הצבעה נסגרת" value="בעוד 8 ימים" />
     </div>
+  );
+}
+
+/** A small four-point light. Three of them, no more. */
+function Twinkle({ className, delay }: { className: string; delay: string }) {
+  return (
+    <svg
+      viewBox="0 0 12 12"
+      aria-hidden
+      className={`twinkle absolute hidden h-3 w-3 sm:block ${className}`}
+      style={{ color: '#6fe3e1', animationDelay: delay }}
+    >
+      <path d="M6 0c.4 3.2 2.4 5.2 6 6-3.6.8-5.6 2.8-6 6-.4-3.2-2.4-5.2-6-6 3.6-.8 5.6-2.8 6-6Z" fill="currentColor" />
+    </svg>
   );
 }
 

@@ -7,8 +7,8 @@
    ========================================================================== */
 
 @theme {
-  --font-sans: var(--font-heebo), "Segoe UI", system-ui, sans-serif;
-  --font-display: var(--font-frank), Georgia, serif;
+  --font-sans: var(--font-body), "Segoe UI", system-ui, sans-serif;
+  --font-display: var(--font-display-face), var(--font-body), system-ui, sans-serif;
 
   /* neutrals */
   --color-paper: #f3f0ea;
@@ -525,4 +525,90 @@ h1, h2, h3 {
 @media (prefers-reduced-motion: reduce) {
   .lamp, .drift, .sweep::after { animation: none; }
   .lamp { opacity: 1; }
+}
+
+/* ==========================================================================
+   Character
+
+   A few touches borrowed from Japanese poster design: a lot of empty space,
+   one small seal-red accent, a soft wave pattern, and neon that only ever
+   appears on the dark panels. Everything here is a garnish. None of it is
+   allowed to make a number or a status harder to read.
+   ========================================================================== */
+
+:root {
+  --color-sakura: #f2a6bb;
+  --color-neon-pink: #ff7eb6;
+  --color-neon-cyan: #6fe3e1;
+  --color-seal: #d8443c;
+
+  /* a short overshoot, so a card that lifts feels springy rather than linear */
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* seigaiha, the overlapping-wave pattern, at the faintest weight that still
+   reads as texture rather than noise */
+.waves {
+  background-image: radial-gradient(
+    circle at 50% 100%,
+    transparent 12px,
+    color-mix(in srgb, var(--color-brand-300) 22%, transparent) 13px,
+    transparent 14px
+  );
+  background-size: 34px 17px;
+}
+
+.waves-night {
+  background-image: radial-gradient(
+    circle at 50% 100%,
+    transparent 12px,
+    rgb(111 227 225 / 0.12) 13px,
+    transparent 14px
+  );
+  background-size: 34px 17px;
+}
+
+/* neon: a glow that belongs to the dark panels only */
+.neon-pink {
+  color: var(--color-neon-pink);
+  text-shadow: 0 0 12px rgb(255 126 182 / 0.55), 0 0 28px rgb(255 126 182 / 0.25);
+}
+
+.neon-cyan {
+  color: var(--color-neon-cyan);
+  text-shadow: 0 0 12px rgb(111 227 225 / 0.5), 0 0 28px rgb(111 227 225 / 0.22);
+}
+
+.neon-ring {
+  box-shadow: 0 0 0 1px rgb(111 227 225 / 0.35), 0 0 22px -4px rgb(111 227 225 / 0.45);
+}
+
+@keyframes blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  96%           { transform: scaleY(0.1); }
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-4px) rotate(-2deg); }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.25; transform: scale(0.85); }
+  50%      { opacity: 1; transform: scale(1); }
+}
+
+.blink  { animation: blink 5.5s ease-in-out infinite; transform-origin: center; }
+.bob    { animation: bob 3.6s ease-in-out infinite; }
+.twinkle { animation: twinkle 2.8s ease-in-out infinite; }
+
+/* springy lift, used on the cards that are meant to feel touchable */
+.springy {
+  transition: transform 0.26s var(--ease-bounce), box-shadow 0.26s ease;
+}
+.springy:hover { transform: translateY(-5px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .blink, .bob, .twinkle { animation: none; }
+  .springy:hover { transform: none; }
 }
