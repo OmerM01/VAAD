@@ -138,7 +138,7 @@ export default function HomePage() {
               style={{ animationDelay: '80ms', color: SKY }}
             >
               תקלות, תקציב והצבעות של הבניין במקום אחד. כל דייר רואה בדיוק את
-              אותה תמונה, בלי לשאול אף אחד ובלי לגלול אחורה בוואטסאפ.
+              אותה תמונה, בלי לשאול אף אחד.
             </p>
 
             <div
@@ -158,8 +158,8 @@ export default function HomePage() {
               </Link>
               <Link
                 href="/signup?mode=join"
-                className="px-1 text-[0.9375rem] font-semibold underline-offset-4 transition-colors duration-200 hover:underline"
-                style={{ color: DIM }}
+                className="rounded-xl border px-5 py-3 text-[0.9375rem] font-semibold transition-colors duration-200 hover:bg-white/10"
+                style={{ borderColor: EDGE, color: SKY }}
               >
                 יש לי קוד הצטרפות
               </Link>
