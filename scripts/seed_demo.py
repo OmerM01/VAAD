@@ -195,102 +195,228 @@ if get(tokens["vaad"], "faults?select=id&limit=1")[1] and "--refresh" not in sys
 # ---------------------------------------------------------------------------
 #  Refresh mode
 #
-#  Only the time-sensitive content. Closed proposals and expired notices are
-#  left where they are: they are what the "finished" tabs are meant to show.
+#  Anything with a deadline goes stale on its own: votes close, notices expire,
+#  and a ledger that stops three months back makes the building look abandoned.
+#  This tops each of those up without touching the history, which is what the
+#  "finished" tabs are there to show.
+#
+#  Every section checks first and skips what is still current, and every new
+#  row is matched against the titles already in the building, so running this
+#  twice in a row adds nothing the second time.
 # ---------------------------------------------------------------------------
+
+DUES = 2800
+
+MONTHS = [
+    "ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני",
+    "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר",
+]
+
+
+def fresh(pool, taken):
+    """Pool entries whose title the building does not already carry."""
+    return [item for item in pool if item[0] not in taken]
+
 
 if "--refresh" in sys.argv:
     print("\nrefresh")
+    today = date.today()
 
-    live = [
-        p
-        for p in rpc(tokens["vaad"], "get_proposals", {"p_id": None})[1]
-        if p["status"] == "open"
+    # --- faults ------------------------------------------------------------
+    #
+    # A building where nothing has broken in three months is a building nobody
+    # believes in.
+
+    seen = {f["title"] for f in get(tokens["vaad"], "faults?select=title")[1]}
+    newest = get(tokens["vaad"], "faults?select=created_at&order=created_at.desc&limit=1")[1]
+    age = (NOW - datetime.fromisoformat(newest[0]["created_at"])).days if newest else 999
+
+    NEW_FAULTS = [
+        ("האינטרקום בדירה 9 לא מצלצל", "omer", "שומעים את הזמזם בכניסה, אבל אצלי בדירה שקט לגמרי.", "electricity", "open", 2),
+        ("דלת חדר האשפה לא נסגרת עד הסוף", "ronit", None, "cleaning", "open", 5),
+        ("רעש חזק ממשאבת המים בלילה", "neta", "מתחיל בערך באחת-עשרה בלילה ונמשך כחצי שעה. נשמע בקומות התחתונות.", "plumbing", "in_progress", 9),
+        ("אריח שבור במדרגות בין קומה 1 ל-2", "yael", "אפשר להיתקל בו. שווה לתקן לפני שמישהו ייפול.", "structure", "open", 14),
+        ("הנורה בחדר האופניים לא נדלקת", "avi", None, "electricity", "closed", 21),
     ]
-    if live:
-        print(f"  {len(live)} proposals still open — leaving them")
+
+    if age <= 21:
+        print(f"  the newest fault is {age} days old, leaving the list alone")
     else:
-        FRESH_PROPOSALS = [
-            {
-                "by": "vaad",
-                "title": "להחליף את דלת הכניסה לדלת עם קוד",
-                "desc": "המנעול הנוכחי נתקע שוב, וכבר שילמנו על שני תיקונים. דלת עם קוד תחסוך גם את העותקים האבודים של המפתח. הצעת מחיר: 4,900 ש\"ח כולל התקנה.",
-                "anon": False,
-                "closes": 9,
-                "votes": [("dayar", "for", False), ("neta", "for", True), ("avi", "against", False)],
-            },
-            {
-                "by": "neta",
-                "title": "לצבוע מחדש את חדר המדרגות",
-                "desc": "הצבע מתקלף בקומות התחתונות מאז הנזילה. שתי הצעות מחיר בטווח 5,000 עד 6,500 ש\"ח.",
-                "anon": True,
-                "closes": 16,
-                "votes": [("vaad", "for", False), ("ronit", "for", False), ("omer", "against", True)],
-            },
-        ]
-        for spec in FRESH_PROPOSALS:
+        for title, who, desc, category, status, days in fresh(NEW_FAULTS, seen)[:3]:
             status_code, data = insert(
-                tokens[spec["by"]],
-                "proposals",
+                tokens[who],
+                "faults",
                 {
                     "building_id": BUILDING,
-                    "created_by": USERS[spec["by"]],
-                    "title": spec["title"],
-                    "description": spec["desc"],
-                    "creator_anonymous": spec["anon"],
-                    "closes_at": ahead(spec["closes"]),
+                    "reported_by": USERS[who],
+                    "title": title,
+                    "description": desc,
+                    "category": category,
+                    "created_at": ago(days),
                 },
                 select="id",
             )
             if status_code != 201:
-                print("  FAILED", spec["title"], status_code, data)
+                print("  FAILED", title, status_code, data)
                 continue
-            for who, choice, anon in spec["votes"]:
-                rpc(
-                    tokens[who],
-                    "vote_on_proposal",
-                    {"p_proposal_id": data[0]["id"], "p_vote": choice, "p_anonymous": anon},
-                )
-            print(f"  + הצעה פתוחה ל-{spec['closes']} ימים: {spec['title']}")
+            if status != "open":
+                call("PATCH", f"/rest/v1/faults?id=eq.{data[0]['id']}", {"status": status}, tokens["vaad"])
+            print(f"  + תקלה ({status}): {title}")
 
-    notices = get(tokens["vaad"], "neighbour_posts?select=kind,status,expires_at")[1]
-    now = NOW.isoformat()
-    active_buys = [
-        n
-        for n in notices
-        if n["kind"] == "group_buy"
-        and n["status"] == "active"
-        and (n["expires_at"] or "") > now
+    # --- budget ------------------------------------------------------------
+    #
+    # Dues come in and the cleaner gets paid whether or not anyone reseeds the
+    # demo, so fill in every month between the last entry and this one. The
+    # ledger is append-only, which is exactly why a gap cannot be edited away.
+
+    ledger = get(tokens["vaad"], "budget_transactions?select=date,description&order=date.desc")[1]
+    booked = {t["description"] for t in ledger}
+    last = date.fromisoformat(ledger[0]["date"]) if ledger else today
+
+    # the month after the last entry, through this one
+    month = date(last.year + (last.month // 12), (last.month % 12) + 1, 1)
+    added = 0
+    while (month.year, month.month) <= (today.year, today.month):
+        name = MONTHS[month.month - 1]
+        entries = [
+            ("income", DUES, f"דמי ועד — {name}", 3),
+            ("expense", 850, f"ניקיון חדר מדרגות — {name}", 8),
+            ("expense", 400, f"גינון — {name}", 10),
+        ]
+        if month.month % 2 == 0:
+            entries.append(("expense", 446, f"חשמל שטחים משותפים — {name}", 18))
+        if month.month in (1, 4, 7, 10):
+            quarter = ["ראשון", "שני", "שלישי", "רביעי"][(month.month - 1) // 3]
+            entries.append(("expense", 618, f"תחזוקת מעליות — רבעון {quarter}", 15))
+
+        for kind, amount, description, dom in entries:
+            when = month.replace(day=dom)
+            if when > today or description in booked:
+                continue
+            author = "vaad" if dom % 2 == 0 else "yael"
+            status_code, data = insert(
+                tokens[author],
+                "budget_transactions",
+                {
+                    "building_id": BUILDING,
+                    "created_by": USERS[author],
+                    "type": kind,
+                    "amount": amount,
+                    "description": description,
+                    "date": when.isoformat(),
+                },
+                select="id",
+            )
+            if status_code == 201:
+                added += 1
+            else:
+                print("  FAILED", description, status_code, data)
+
+        month = date(month.year + (month.month // 12), (month.month % 12) + 1, 1)
+
+    print(f"  + {added} תנועות תקציב" if added else "  the ledger is up to date")
+
+    # --- proposals ---------------------------------------------------------
+
+    live = [p for p in rpc(tokens["vaad"], "get_proposals", {"p_id": None})[1] if p["status"] == "open"]
+    voted = {p["title"] for p in rpc(tokens["vaad"], "get_proposals", {"p_id": None})[1]}
+
+    NEW_PROPOSALS = [
+        ("להחליף את תיבות הדואר בכניסה",
+         "yael", False, 8,
+         "שלוש מהתיבות כבר לא ננעלות, ודואר רשום נשאר על אדן החלון. הצעת מחיר לסט חדש של שתים-עשרה תיבות: 3,200 ש\"ח.",
+         [("dayar", "for", False), ("neta", "for", True), ("omer", "for", False), ("avi", "against", False)]),
+        ("לקבוע נוהל לשימוש בחדר האופניים",
+         "neta", True, 15,
+         "החדר מלא באופניים שאף אחד לא נוגע בהם כבר שנה, ואין מקום לאלה שכן בשימוש. מוצע לסמן מקומות ולפנות מה שלא נדרש.",
+         [("vaad", "for", False), ("ronit", "for", False), ("yael", "against", True)]),
+        ("להתקין דוד שמש משותף על הגג",
+         "omer", False, 11,
+         "בדקתי מול שני מתקינים. העלות מתחלקת על שמונה דירות והחיסכון מחזיר אותה תוך כשלוש שנים.",
+         [("vaad", "for", False), ("avi", "for", False), ("dayar", "against", True)]),
+        ("לשכור חברת גינון במקום גנן עצמאי",
+         "avi", False, 19,
+         "הגנן מגיע פעם בחודש ולא תמיד. חברה גובה 480 ש\"ח בחודש ומגיעה כל שבועיים בקביעות.",
+         [("ronit", "for", True), ("neta", "for", False), ("yael", "for", False), ("omer", "against", False)]),
     ]
-    if active_buys:
-        print("  a shared order is still running — leaving it")
+
+    if live:
+        print(f"  {len(live)} proposals still open, leaving them")
     else:
-        status_code, data = insert(
-            tokens["ronit"],
-            "neighbour_posts",
-            {
-                "building_id": BUILDING,
-                "created_by": USERS["ronit"],
-                "kind": "group_buy",
-                "title": "ארגז ירקות מחקלאי — ההזמנה הבאה",
-                "description": "ממשיכה עם ההזמנה הקבועה כל שבועיים, ישירות מחקלאי בשרון. ארגז מעורב של כ-8 ק״ג, מגיע ביום חמישי אחר הצהריים לכניסה. צריך שישה מזמינים כדי שהמשלוח ישתלם.",
-                "price_note": "כ-90 ש״ח לארגז",
-                "contact": "ווטסאפ 053-555-2211",
-                "expires_at": ahead(13),
-            },
-            select="id",
-        )
-        if status_code == 201:
-            for joiner in ["vaad", "neta", "avi", "dayar"]:
-                insert(
-                    tokens[joiner],
-                    "post_interests",
-                    {"post_id": data[0]["id"], "user_id": USERS[joiner]},
-                    select="id",
-                )
-            print("  + קנייה מרוכזת חדשה, עם ארבעה נרשמים")
-        else:
-            print("  FAILED group buy", status_code, data)
+        for title, who, anon, closes, desc, votes in fresh(NEW_PROPOSALS, voted)[:2]:
+            status_code, data = insert(
+                tokens[who],
+                "proposals",
+                {
+                    "building_id": BUILDING,
+                    "created_by": USERS[who],
+                    "title": title,
+                    "description": desc,
+                    "creator_anonymous": anon,
+                    "closes_at": ahead(closes),
+                    "created_at": ago(3),
+                },
+                select="id",
+            )
+            if status_code != 201:
+                print("  FAILED", title, status_code, data)
+                continue
+            for voter, choice, hidden in votes:
+                rpc(tokens[voter], "vote_on_proposal",
+                    {"p_proposal_id": data[0]["id"], "p_vote": choice, "p_anonymous": hidden})
+            print(f"  + הצעה פתוחה ל-{closes} ימים: {title}")
+
+    # --- board -------------------------------------------------------------
+
+    posts = get(tokens["vaad"], "neighbour_posts?select=title,status,expires_at")[1]
+    posted = {p["title"] for p in posts}
+    standing = [
+        p for p in posts
+        if p["status"] == "active" and (p["expires_at"] or "") > NOW.isoformat()
+    ]
+
+    this_month = MONTHS[today.month - 1]
+    NEW_POSTS = [
+        (f"ארגז ירקות מחקלאי — הזמנת {this_month}", "ronit", "group_buy",
+         "ממשיכה עם ההזמנה הקבועה כל שבועיים, ישירות מחקלאי בשרון. ארגז מעורב של כ-8 ק״ג, מגיע ביום חמישי אחר הצהריים לכניסה. צריך שישה מזמינים כדי שהמשלוח ישתלם.",
+         "כ-90 ש״ח לארגז", "ווטסאפ 053-555-2211", 13, ["vaad", "neta", "avi", "dayar"]),
+        ("בייביסיטר בערבים, עכשיו גם בסופי שבוע", "neta", "offer",
+         "סטודנטית לחינוך, דירה 6. פתחתי גם שישי-שבת, ואפשר בהתראה קצרה.",
+         "45 ש״ח לשעה", "ווטסאפ 052-555-1234", 30, ["dayar", "avi"]),
+        ("מחפשת טרמפ קבוע לכיוון תל אביב בבקרים", "yael", "request",
+         "יוצאת כל יום בסביבות 7:15 לקריית עתידים. משתתפת בדלק בשמחה.",
+         None, "דירה 1", 21, ["omer"]),
+        ("הוצאת כלבים בבוקר, נשאר מקום אחד", "omer", "offer",
+         "יוצא כל בוקר ב-6:45 עם הכלב שלי. יש מקום לעוד אחד בקבוצה.",
+         "20 ש״ח להליכה", "דירה 9, או 054-555-8890", 30, ["ronit"]),
+    ]
+
+    if len(standing) >= 3:
+        print(f"  {len(standing)} notices still running, leaving the board alone")
+    else:
+        for title, who, kind, desc, price, contact, expires, joiners in fresh(NEW_POSTS, posted)[:3]:
+            status_code, data = insert(
+                tokens[who],
+                "neighbour_posts",
+                {
+                    "building_id": BUILDING,
+                    "created_by": USERS[who],
+                    "kind": kind,
+                    "title": title,
+                    "description": desc,
+                    "price_note": price,
+                    "contact": contact,
+                    "expires_at": ahead(expires),
+                },
+                select="id",
+            )
+            if status_code != 201:
+                print("  FAILED", title, status_code, data)
+                continue
+            for joiner in joiners:
+                insert(tokens[joiner], "post_interests",
+                       {"post_id": data[0]["id"], "user_id": USERS[joiner]}, select="id")
+            print(f"  + מודעה ({len(joiners)} נרשמו): {title}")
 
     print("\ndone.")
     sys.exit(0)
@@ -343,7 +469,6 @@ for who, title, desc, category, status, days in FAULTS:
 #  Budget
 # ---------------------------------------------------------------------------
 
-DUES = 2800
 LEDGER = [
     ("income", DUES, "דמי ועד — אפריל", 137),
     ("expense", 850, "ניקיון חדר מדרגות — אפריל", 132),
